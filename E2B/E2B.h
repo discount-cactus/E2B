@@ -230,11 +230,11 @@
 #define PARASITE 0
 
 // Device Family-Code
-#define DS18B20	0x28
+/*#define DS18B20	0x28
 #define DS18S20 0x10
 #define DS1822  0x22
 #define DS1820	0x10
-#define DS2423	0x1D
+#define DS2423	0x1D*/
 
 // Device resolution
 #define TEMP_9_BIT  0x1F //  9 bit
@@ -271,7 +271,7 @@ class E2B{
     uint8_t waitTimeSlotRead();
     uint8_t power;
     char rom[8];
-    char scratchpad[9];
+    //char scratchpad[9];           //Moved to be a public variable
     char temp_scratchpad[3];
     char scratchpadtemperature[2];
 
@@ -327,6 +327,7 @@ class E2B{
     uint8_t crc8_alt(char addr[], uint8_t len);
 
     uint8_t errnum;
+    char scratchpad[9];           //Originally a private variable
 };
 
 static E2B* static_OWS_instance;
