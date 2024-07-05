@@ -1,12 +1,12 @@
 #######################################
-# Syntax Coloring Map For OneWire
+# Syntax Coloring Map For E2B
 #######################################
 
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
 
-OneWire	KEYWORD1
+E2B	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
@@ -27,6 +27,23 @@ search	KEYWORD2
 crc8	KEYWORD2
 crc16	KEYWORD2
 check_crc16	KEYWORD2
+
+setRom	KEYWORD2
+presence	KEYWORD2
+waitReset	KEYWORD2
+waitForRequest	KEYWORD2
+waitTimeSlot	KEYWORD2
+recvAndProcessCmd	KEYWORD2
+sendBit		KEYWORD2
+recvBit		KEYWORD2
+send		KEYWORD2
+recv		KEYWORD2
+sendData	KEYWORD2
+recvData	KEYWORD2
+waitReset	KEYWORD2
+presence	KEYWORD2
+searchROM		KEYWORD2
+crc8_alt		KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)
