@@ -71,7 +71,10 @@ int pinScan(int pin){
       case 0x29:
         Serial.print("\t\tDS2408");
         break;
-      case 0xAA:
+      case 0xA0:
+        Serial.print("\t\tATtiny");
+        break;
+      case 0xA1:
         Serial.print("\t\tArduino");
         break;
     }

@@ -19,6 +19,15 @@
 // Board-specific macros for direct GPIO
 #include "util/E2B_direct_regtype.h"
 
+// you can exclude e2b search by defining that to 0
+#ifndef E2B_SEARCH
+#define E2B_SEARCH 1
+#endif
+
+// you can exclude e2b CRC by defining that to 0
+#ifndef E2B_CRC
+#define E2B_CRC 1
+#endif
 
 #if defined(__SAM3X8E__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__PIC32MX__)
 #define lowmark   325
@@ -289,12 +298,11 @@ class E2B{
     void write_bit(uint8_t v);
     uint8_t read_bit(void);
     void depower(void);
+    #if E2B_SEARCH
     void reset_search();
     void target_search(uint8_t family_code);
     bool search(uint8_t *newAddr, bool search_mode = true);
-    static uint8_t crc8(const uint8_t *addr, uint8_t len);
-    static bool check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc = 0);
-    static uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc = 0);
+    #endif
 
     //E2B(uint8_t pin);
     void init(unsigned char rom[8]);
@@ -324,7 +332,13 @@ class E2B{
     uint8_t recv(void);
     void sendBit(uint8_t v);
     uint8_t recvBit(void);
-    uint8_t crc8_alt(char addr[], uint8_t len);
+
+    #if E2B_CRC
+      static uint8_t crc8(const uint8_t *addr, uint8_t len);
+      static bool check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc = 0);
+      static uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc = 0);
+      uint8_t crc8_alt(char addr[], uint8_t len);
+    #endif
 
     uint8_t errnum;
     char scratchpad[9];           //Originally a private variable
