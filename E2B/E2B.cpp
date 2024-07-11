@@ -205,14 +205,16 @@ sample code bearing this copyright.
 #include "util/E2B_direct_gpio.h"
 
 //These are the major change from original, we now wait quite a bit longer for some things
-#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
-//This TIMESLOT_WAIT_READ_RETRY_COUNT is new, and only used when waiting for the line to go low on a read
-//It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
-#define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
+#if E2B_ASYNC_RECV
+  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+  //This TIMESLOT_WAIT_READ_RETRY_COUNT is new, and only used when waiting for the line to go low on a read
+  //It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
+  #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
 
-void E2B::ISRPIN() {
-  (*static_OWS_instance).MasterResetPulseDetection();
-}
+  void E2B::ISRPIN() {
+    (*static_OWS_instance).MasterResetPulseDetection();
+  }
+#endif
 
 uint8_t _pin;
 
@@ -557,13 +559,14 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
    return search_result;
   }
 
-#endif
+#endif    //E2B_SEARCH
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if E2B_ASYNC_RECV
 
 void E2B::MasterResetPulseDetection() {
   old_previous = previous;
@@ -1111,6 +1114,26 @@ uint8_t E2B::waitTimeSlotRead() {
   return 1;
 }
 
+//
+// Compute a Dallas Semiconductor 8 bit CRC directly.
+//
+uint8_t E2B::crc8_alt(char addr[], uint8_t len) {
+  uint8_t crc = 0;
+
+  while (len--) {
+    uint8_t inbyte = *addr++;
+    for (uint8_t i = 8; i; i--) {
+      uint8_t mix = (crc ^ inbyte) & 0x01;
+      crc >>= 1;
+      if (mix) crc ^= 0x8C;
+        inbyte >>= 1;
+    }
+  }
+  return crc;
+}
+
+#endif    //E2B_ASYNC_RECV
+
 
 
 #if E2B_CRC
@@ -1195,22 +1218,4 @@ uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
     return crc;
 }
 
-//
-// Compute a Dallas Semiconductor 8 bit CRC directly.
-//
-uint8_t E2B::crc8_alt(char addr[], uint8_t len) {
-  uint8_t crc = 0;
-
-  while (len--) {
-    uint8_t inbyte = *addr++;
-    for (uint8_t i = 8; i; i--) {
-      uint8_t mix = (crc ^ inbyte) & 0x01;
-      crc >>= 1;
-      if (mix) crc ^= 0x8C;
-        inbyte >>= 1;
-    }
-  }
-  return crc;
-}
-
-#endif
+#endif    //E2B_CRC

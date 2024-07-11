@@ -9,17 +9,17 @@ unsigned char scratchpad[9] = {0x00, 0x00, 0x4B, 0x46, 0x7F, 0xFF, 0x00, 0x10, 0
 E2B ds(E2B_pin);  // on pin 10 (a 4.7K resistor is necessary)
 
 void setup() {
-  attachInterrupt(E2B_pin,respond,CHANGE);
+  //attachInterrupt(E2B_pin,respond,CHANGE);
   Serial.begin(9600);
   while(!Serial);
   Serial.println("Test.");
-  ds.init(rom);
-  ds.setScratchpad(scratchpad);
+  //ds.init(rom);
+  //ds.setScratchpad(scratchpad);
 }
 
-void respond(){
+/*void respond(){
   ds.MasterResetPulseDetection();
-}
+}*/
 
 void loop(void) {
   byte i;
@@ -29,13 +29,13 @@ void loop(void) {
   byte addr[8];
   float celsius, fahrenheit;
   
-  if(!ds.search(addr)){
+  /*if(!ds.search(addr)){
     Serial.println("No more addresses.");
     Serial.println();
     ds.reset_search();
     delay(250);
     return;
-  }
+  }*/
   
   Serial.print("ROM =");
   for( i = 0; i < 8; i++) {
@@ -43,10 +43,10 @@ void loop(void) {
     Serial.print(addr[i], HEX);
   }
 
-  if (E2B::crc8(addr, 7) != addr[7]) {
+  /*if (E2B::crc8(addr, 7) != addr[7]) {
       Serial.println("CRC is not valid!");
       return;
-  }
+  }*/
   Serial.println();
  
   // the first ROM byte indicates which chip
@@ -88,7 +88,7 @@ void loop(void) {
     Serial.print(" ");
   }
   Serial.print(" CRC=");
-  Serial.print(E2B::crc8(data, 8), HEX);
+  //Serial.print(E2B::crc8(data, 8), HEX);
   Serial.println();
 
   // Convert the data to actual temperature
