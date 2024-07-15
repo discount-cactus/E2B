@@ -25,4 +25,5 @@ void respond(){
 
 void loop(void) {
   ds.waitForRequest(false);
+  Serial.println(ds.scratchpad[4],HEX);
 }
