@@ -56,20 +56,31 @@ int pinScan(int pin){
     //Device type
     switch(addr[0]){
       default:
-        //Serial.println("Device is not a DS18x20 family device.");
         Serial.print("\t\tUnknown");
         return;
       case 0x10:
         Serial.print("\t\tDS18S20");  // or old DS1820
         break;
-      case 0x28:
-        Serial.print("\t\tDS18B20");
+      case 0x18:
+        Serial.print("\t\tDS2484");
+        break;
+      case 0x1D:
+        Serial.print("\t\tDS2423");
         break;
       case 0x22:
         Serial.print("\t\tDS1822");
         break;
+      case 0x27:
+        Serial.print("\t\tDS2417");
+        break;
+      case 0x28:
+        Serial.print("\t\tDS18B20");
+        break;
       case 0x29:
         Serial.print("\t\tDS2408");
+        break;
+      case 0x56:
+        Serial.print("\t\tDS28E18");
         break;
       case 0xA0:
         Serial.print("\t\tATtiny");

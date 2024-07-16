@@ -218,18 +218,6 @@ sample code bearing this copyright.
 
 uint8_t _pin;
 
-/*E2B::E2B(uint8_t pin) {
-	_pin = pin;
-	pinMode(_pin, INPUT);
-	bitmask = PIN_TO_BITMASK(_pin);
-	baseReg = PIN_TO_BASEREG(_pin);
-
-}*/
-
-volatile long previous = 0;
-volatile long old_previous = 0;
-volatile long diff = 0;
-
 void E2B::begin(uint8_t pin){
 	_pin = pin;
 	pinMode(_pin, INPUT);
@@ -568,6 +556,10 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if E2B_ASYNC_RECV
 
+volatile long previous = 0;
+volatile long old_previous = 0;
+volatile long diff = 0;
+
 void E2B::MasterResetPulseDetection() {
   old_previous = previous;
   previous = micros();
@@ -622,24 +614,29 @@ void E2B::setPower(uint8_t power) {
   this->power = power;
 }
 
-void (*user44hFunc)(void);
+//Enables users to define their own functions for the device to automatically respond with
+typedef void (*FuncPointerArray)(void);
+FuncPointerArray userFunc[256];
+void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
+	userFunc[num] = userFunction;
+	this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
+}
 
+/*void (*user44hFunc)(void);
 void E2B::attach44h(void (*userFunction44h)(void)) {
 	user44hFunc = userFunction44h;
 	this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
 }
 
 void (*user48hFunc)(void);
-
 void E2B::attach48h(void (*userFunction48h)(void)) {
 	user48hFunc = userFunction48h;
 }
 
 void (*userB8hFunc)(void);
-
 void E2B::attachB8h(void (*userFunctionB8h)(void)) {
 	userB8hFunc = userFunctionB8h;
-}
+}*/
 
 bool E2B::waitForRequest(bool ignore_errors) {
   errnum = ONEWIRE_NO_ERROR;
@@ -756,17 +753,17 @@ bool E2B::duty() {
 				return false;
 			break;
 		case 0x44: // CONVERT SENSOR
-			user44hFunc();
+			userFunc[0x44];                       //originally user44hFunc();
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
 			break;
 		case 0x48: // CONVERT SENSOR
-			user48hFunc();
+			userFunc[0x48];                       //originally user48hFunc();
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
 			break;
 		case 0xB8: // CONVERT SENSOR
-			userB8hFunc();
+			userFunc[0xB8];                       //originally userB8hFunc();
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
 			break;
