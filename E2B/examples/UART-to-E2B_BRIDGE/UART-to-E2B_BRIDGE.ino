@@ -16,13 +16,13 @@ ATtiny85 RX pin: -> Arduino RX     (pin 0 on Arduino Uno)
 ATtiny85 TX pin: -> Arduino TX     (pin 1 on Arduino Uno)
 
 */
-#include <TaskScheduler.h>
 #include <E2B.h>
 #include <SoftwareSerial.h>
  
 #define E2B_pin 2
 #define rxPin 10 //3
 #define txPin 11 //4
+#define dirPin 5
 
 unsigned char rom[8] = {FAMILYCODE, 0xB2, 0xDD, 0x03, 0x00, 0x00, 0x11, 0x00};
 unsigned char scratchpad[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -32,18 +32,30 @@ unsigned char scratchpad[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0
 E2B e2b(E2B_pin);
 SoftwareSerial mySerial(rxPin, txPin);
 
-// Callback methods prototypes
-void t1Callback();
-void t2Callback();
+void setup(){
+  attachInterrupt(E2B_pin,respond,CHANGE);
+  e2b.init(rom);
+  e2b.setScratchpad(scratchpad);
+  Serial.begin(9600);
+  while(!Serial){}
+  mySerial.begin(9600);
+  pinMode(dirPin,INPUT);
+}
 
-//Tasks
-Task t1(TASK_IMMEDIATE, TASK_FOREVER, &t1Callback);
-Task t2(TASK_IMMEDIATE, TASK_FOREVER, &t2Callback);
+void respond(){
+  e2b.MasterResetPulseDetection();
+}
 
-Scheduler runner;
+void loop(){
+  bool dir = digitalRead(dirPin);
+  if(!dir){
+    uart_to_e2b();
+  }else{
+    e2b_to_uart();
+  }
+}
 
-
-void t1Callback(){
+void uart_to_e2b(){
   //Get UART, send E2B
   if (mySerial.available()){
     uint8_t dataUART = mySerial.read();
@@ -58,33 +70,10 @@ void t1Callback(){
   }
 }
 
-void t2Callback() {
+void e2b_to_uart(){
   //Get E2B, send UART
   e2b.waitForRequest(false);
   uint8_t dataE2B = e2b.scratchpad[4];
   mySerial.write(dataE2B);
   Serial.println(dataE2B,HEX);
-}
-
-void setup(){
-  runner.init();
-  runner.addTask(t1);
-  runner.addTask(t2);
-  t1.enable();
-  //t2.enable();
-
-  attachInterrupt(E2B_pin,respond,CHANGE);
-  e2b.init(rom);
-  e2b.setScratchpad(scratchpad);
-  Serial.begin(9600);
-  while(!Serial){}
-  mySerial.begin(9600);
-}
-
-void respond(){
-  e2b.MasterResetPulseDetection();
-}
-
-void loop(){
-  runner.execute();
 }
