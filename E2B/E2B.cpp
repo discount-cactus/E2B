@@ -4,7 +4,7 @@ Copyright (c) 2007, Jim Studt  (original old version - many contributors since)
 The latest version of this library may be found at:
   http://www.pjrc.com/teensy/td_libs_E2B.html
 
-E2B has been maintained by Paul Stoffregen (paul@pjrc.com) since
+OneWire has been maintained by Paul Stoffregen (paul@pjrc.com) since
 January 2010.
 
 DO NOT EMAIL for technical support, especially not for ESP chips!
@@ -13,23 +13,23 @@ relevant to the board or chips used.  If using Arduino, post on
 Arduino's forum.  If using ESP, post on the ESP community forums.
 There is ABSOLUTELY NO TECH SUPPORT BY PRIVATE EMAIL!
 
-Github's issue tracker for E2B should be used only to report
+Github's issue tracker for OneWire should be used only to report
 specific bugs.  DO NOT request project support via Github.  All
 project and tech support questions must be posted on forums, not
 github issues.  If you experience a problem and you are not
 absolutely sure it's an issue with the library, ask on a forum
 first.  Only use github to report issues after experts have
-confirmed the issue is with E2B rather than your project.
+confirmed the issue is with OneWire rather than your project.
 
-Back in 2010, E2B was in need of many bug fixes, but had
+Back in 2010, OneWire was in need of many bug fixes, but had
 been abandoned the original author (Jim Studt).  None of the known
-contributors were interested in maintaining E2B.  Paul typically
-works on E2B every 6 to 12 months.  Patches usually wait that
-long.  If anyone is interested in more actively maintaining E2B,
+contributors were interested in maintaining OneWire.  Paul typically
+works on OneWire every 6 to 12 months.  Patches usually wait that
+long.  If anyone is interested in more actively maintaining OneWire,
 please contact Paul (this is pretty much the only reason to use
-private email about E2B).
+private email about OneWire).
 
-E2B is now very mature code.  No changes other than adding
+OneWire is now very mature code.  No changes other than adding
 definitions for newer hardware support are anticipated.
 
 Version 2.3:
@@ -142,9 +142,9 @@ sample code bearing this copyright.
 
 
 /*
-E2B v1.1 by Joshua Fuller - Modified based on versions noted below for Digispark
+OneWireSlave v1.1 by Joshua Fuller - Modified based on versions noted below for Digispark
 
-E2B v1.0 by Alexander Gordeyev
+OneWireSlave v1.0 by Alexander Gordeyev
 
 It is based on Jim's Studt OneWire library v2.0
 
@@ -205,14 +205,16 @@ sample code bearing this copyright.
 #include "util/E2B_direct_gpio.h"
 
 //These are the major change from original, we now wait quite a bit longer for some things
-#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
-//This TIMESLOT_WAIT_READ_RETRY_COUNT is new, and only used when waiting for the line to go low on a read
-//It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
-#define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
+#if E2B_ASYNC_RECV
+  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+  //This TIMESLOT_WAIT_READ_RETRY_COUNT is new, and only used when waiting for the line to go low on a read
+  //It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
+  #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
 
-void E2B::ISRPIN() {
-  (*static_OWS_instance).MasterResetPulseDetection();
-}
+  void E2B::ISRPIN() {
+    (*static_OWS_instance).MasterResetPulseDetection();
+  }
+#endif
 
 uint8_t _pin;
 
@@ -234,7 +236,9 @@ void E2B::begin(uint8_t pin){
 	bitmask = PIN_TO_BITMASK(_pin);
 	baseReg = PIN_TO_BASEREG(_pin);
 
-	reset_search();
+  #if E2B_SEARCH
+	 reset_search();
+  #endif
 }
 
 
@@ -395,6 +399,7 @@ void E2B::depower(){
 	interrupts();
 }
 
+#if E2B_SEARCH
 //
 // You need to use this function to start a search again from the beginning.
 // You do not need to do it for the first search, though you could.
@@ -554,92 +559,14 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
    return search_result;
   }
 
-// The 1-Wire CRC scheme is described in Maxim Application Note 27:
-// "Understanding and Using Cyclic Redundancy Checks with Maxim iButton Products"
-//
-//
-// Compute a Dallas Semiconductor 8 bit CRC directly.
-// this is much slower, but a little smaller, than the lookup table.
-//
-uint8_t E2B::crc8(const uint8_t *addr, uint8_t len){
-	uint8_t crc = 0;
-
-	while (len--) {
-		uint8_t inbyte = *addr++;
-		for (uint8_t i = 8; i; i--) {
-			uint8_t mix = (crc ^ inbyte) & 0x01;
-			crc >>= 1;
-			if (mix) crc ^= 0x8C;
-			inbyte >>= 1;
-		}
-	}
-	return crc;
-}
-
-// Compute the 1-Wire CRC16 and compare it against the received CRC.
-// Example usage (reading a DS2408):
-//    // Put everything in a buffer so we can compute the CRC easily.
-//    uint8_t buf[13];
-//    buf[0] = 0xF0;    // Read PIO Registers
-//    buf[1] = 0x88;    // LSB address
-//    buf[2] = 0x00;    // MSB address
-//    WriteBytes(net, buf, 3);    // Write 3 cmd bytes
-//    ReadBytes(net, buf+3, 10);  // Read 6 data bytes, 2 0xFF, 2 CRC16
-//    if (!CheckCRC16(buf, 11, &buf[11])) {
-//        // Handle error.
-//    }
-//
-// @param input - Array of bytes to checksum.
-// @param len - How many bytes to use.
-// @param inverted_crc - The two CRC16 bytes in the received data.
-//                       This should just point into the received data,
-//                       *not* at a 16-bit integer.
-// @param crc - The crc starting value (optional)
-// @return true, iff the CRC matches.
-bool E2B::check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc){
-    crc = ~crc16(input, len, crc);
-    return (crc & 0xFF) == inverted_crc[0] && (crc >> 8) == inverted_crc[1];
-}
-
-// Compute a Dallas Semiconductor 16 bit CRC.  This is required to check
-// the integrity of data received from many 1-Wire devices.  Note that the
-// CRC computed here is *not* what you'll get from the 1-Wire network,
-// for two reasons:
-//   1) The CRC is transmitted bitwise inverted.
-//   2) Depending on the endian-ness of your processor, the binary
-//      representation of the two-byte return value may have a different
-//      byte order than the two bytes you get from 1-Wire.
-// @param input - Array of bytes to checksum.
-// @param len - How many bytes to use.
-// @param crc - The crc starting value (optional)
-// @return The CRC16, as defined by Dallas Semiconductor.
-uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
-    static const uint8_t oddparity[16] =
-        { 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0 };
-
-    for (uint16_t i = 0 ; i < len ; i++) {
-      // Even though we're just copying a byte from the input,
-      // we'll be doing 16-bit computation with it.
-      uint16_t cdata = input[i];
-      cdata = (cdata ^ crc) & 0xff;
-      crc >>= 8;
-
-      if (oddparity[cdata & 0x0F] ^ oddparity[cdata >> 4])
-          crc ^= 0xC001;
-
-      cdata <<= 6;
-      crc ^= cdata;
-      cdata <<= 1;
-      crc ^= cdata;
-    }
-    return crc;
-}
+#endif    //E2B_SEARCH
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if E2B_ASYNC_RECV
 
 void E2B::MasterResetPulseDetection() {
   old_previous = previous;
@@ -810,6 +737,7 @@ bool E2B::recvAndProcessCmd() {
 
   for (;;) {
     uint8_t cmd = recv();
+    //scratchpad[4] = cmd;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution, moved to duty();
     switch (cmd) {
       case 0xF0: // SEARCH ROM
         searchROM();
@@ -849,7 +777,7 @@ bool E2B::recvAndProcessCmd() {
 
 bool E2B::duty() {
 	uint8_t done = recv();
-
+  scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
 	switch (done) {
 		case 0xBE: // READ SCREATCHPAD
 			sendData(scratchpad, 9);
@@ -1204,3 +1132,91 @@ uint8_t E2B::crc8_alt(char addr[], uint8_t len) {
   }
   return crc;
 }
+
+#endif    //E2B_ASYNC_RECV
+
+
+
+#if E2B_CRC
+// The 1-Wire CRC scheme is described in Maxim Application Note 27:
+// "Understanding and Using Cyclic Redundancy Checks with Maxim iButton Products"
+//
+//
+// Compute a Dallas Semiconductor 8 bit CRC directly.
+// this is much slower, but a little smaller, than the lookup table.
+//
+uint8_t E2B::crc8(const uint8_t *addr, uint8_t len){
+	uint8_t crc = 0;
+
+	while (len--) {
+		uint8_t inbyte = *addr++;
+		for (uint8_t i = 8; i; i--) {
+			uint8_t mix = (crc ^ inbyte) & 0x01;
+			crc >>= 1;
+			if (mix) crc ^= 0x8C;
+			inbyte >>= 1;
+		}
+	}
+	return crc;
+}
+
+// Compute the 1-Wire CRC16 and compare it against the received CRC.
+// Example usage (reading a DS2408):
+//    // Put everything in a buffer so we can compute the CRC easily.
+//    uint8_t buf[13];
+//    buf[0] = 0xF0;    // Read PIO Registers
+//    buf[1] = 0x88;    // LSB address
+//    buf[2] = 0x00;    // MSB address
+//    WriteBytes(net, buf, 3);    // Write 3 cmd bytes
+//    ReadBytes(net, buf+3, 10);  // Read 6 data bytes, 2 0xFF, 2 CRC16
+//    if (!CheckCRC16(buf, 11, &buf[11])) {
+//        // Handle error.
+//    }
+//
+// @param input - Array of bytes to checksum.
+// @param len - How many bytes to use.
+// @param inverted_crc - The two CRC16 bytes in the received data.
+//                       This should just point into the received data,
+//                       *not* at a 16-bit integer.
+// @param crc - The crc starting value (optional)
+// @return true, iff the CRC matches.
+bool E2B::check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc){
+    crc = ~crc16(input, len, crc);
+    return (crc & 0xFF) == inverted_crc[0] && (crc >> 8) == inverted_crc[1];
+}
+
+// Compute a Dallas Semiconductor 16 bit CRC.  This is required to check
+// the integrity of data received from many 1-Wire devices.  Note that the
+// CRC computed here is *not* what you'll get from the 1-Wire network,
+// for two reasons:
+//   1) The CRC is transmitted bitwise inverted.
+//   2) Depending on the endian-ness of your processor, the binary
+//      representation of the two-byte return value may have a different
+//      byte order than the two bytes you get from 1-Wire.
+// @param input - Array of bytes to checksum.
+// @param len - How many bytes to use.
+// @param crc - The crc starting value (optional)
+// @return The CRC16, as defined by Dallas Semiconductor.
+uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
+    static const uint8_t oddparity[16] =
+        { 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0 };
+
+    for (uint16_t i = 0 ; i < len ; i++) {
+      // Even though we're just copying a byte from the input,
+      // we'll be doing 16-bit computation with it.
+      uint16_t cdata = input[i];
+      cdata = (cdata ^ crc) & 0xff;
+      crc >>= 8;
+
+      if (oddparity[cdata & 0x0F] ^ oddparity[cdata >> 4])
+          crc ^= 0xC001;
+
+      cdata <<= 6;
+      crc ^= cdata;
+      cdata <<= 1;
+      crc ^= cdata;
+    }
+    return crc;
+}
+
+#endif    //E2B_CRC

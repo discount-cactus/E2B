@@ -6,8 +6,13 @@
 // Platform specific I/O register type
 #if defined(__AVR__)
 #define IO_REG_TYPE uint8_t
+
+#if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
 #define FAMILYCODE 0xA0
+#else
 #define FAMILYCODE 0xA1
+#endif
+
 #elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK66FX1M0__) || defined(__MK64FX512__)
 #define IO_REG_TYPE uint8_t
 #define FAMILYCODE 0xA2

@@ -231,14 +231,14 @@ void directModeOutput(IO_REG_TYPE pin)
 #define DIRECT_MODE_OUTPUT(base, pin)   directModeOutput(pin)
 // https://github.com/PaulStoffregen/E2B/pull/47
 // https://github.com/stickbreaker/E2B/commit/6eb7fc1c11a15b6ac8c60e5671cf36eb6829f82c
-/*#ifdef  interrupts
+#ifdef  interrupts
 #undef  interrupts
 #endif
 #ifdef  noInterrupts
 #undef  noInterrupts
 #endif
 #define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
-#define interrupts() portEXIT_CRITICAL(&mux);}*/
+#define interrupts() portEXIT_CRITICAL(&mux);}
 //#warning "ESP32 E2B testing"
 
 #elif defined(ARDUINO_ARCH_STM32)

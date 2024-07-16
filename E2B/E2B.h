@@ -19,6 +19,20 @@
 // Board-specific macros for direct GPIO
 #include "util/E2B_direct_regtype.h"
 
+// you can exclude asynchronous E2B receiving by defining this to 0
+#ifndef E2B_ASYNC_RECV
+#define E2B_ASYNC_RECV 1
+#endif
+
+// you can exclude e2b search by defining this to 0
+#ifndef E2B_SEARCH
+#define E2B_SEARCH 1
+#endif
+
+// you can exclude e2b CRC by defining this to 0
+#ifndef E2B_CRC
+#define E2B_CRC 1
+#endif
 
 #if defined(__SAM3X8E__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__PIC32MX__)
 #define lowmark   325
@@ -266,14 +280,16 @@ class E2B{
     bool LastDeviceFlag;
 
     //E2Bslave
-    bool recvAndProcessCmd();
-    uint8_t waitTimeSlot();
-    uint8_t waitTimeSlotRead();
-    uint8_t power;
-    char rom[8];
-    //char scratchpad[9];           //Moved to be a public variable
-    char temp_scratchpad[3];
-    char scratchpadtemperature[2];
+    #if E2B_ASYNC_RECV
+      bool recvAndProcessCmd();
+      uint8_t waitTimeSlot();
+      uint8_t waitTimeSlotRead();
+      uint8_t power;
+      char rom[8];
+      //char scratchpad[9];           //Moved to be a public variable
+      char temp_scratchpad[3];
+      char scratchpadtemperature[2];
+    #endif
 
   public:
     E2B() { }
@@ -289,48 +305,60 @@ class E2B{
     void write_bit(uint8_t v);
     uint8_t read_bit(void);
     void depower(void);
-    void reset_search();
-    void target_search(uint8_t family_code);
-    bool search(uint8_t *newAddr, bool search_mode = true);
-    static uint8_t crc8(const uint8_t *addr, uint8_t len);
-    static bool check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc = 0);
-    static uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc = 0);
+    #if E2B_SEARCH
+      void reset_search();
+      void target_search(uint8_t family_code);
+      bool search(uint8_t *newAddr, bool search_mode = true);
+    #endif
 
-    //E2B(uint8_t pin);
-    void init(unsigned char rom[8]);
-    void MasterResetPulseDetection();
-    static void ISRPIN();
-    void setScratchpad(unsigned char scratchpad[9]);
-    void setScratchpad_external(char temp_scratchpad[3]);
-    void setPower(uint8_t power);
-    void setTemperature(unsigned char scratchpadtemperature[2]);
-    bool waitForRequest(bool ignore_errors);
-    bool waitForRequestInterrupt(bool ignore_errors);
-    bool waitReset(uint16_t timeout_ms);
-    bool waitReset();
-    bool owsprint();
-    bool presence(uint8_t delta);
-    bool presence();
-    bool searchROM();
-    bool duty();
-    void setResolution(uint8_t resolution);
-    uint8_t getResolution();
-    void attach44h (void (*)(void));
-    void attach48h (void (*)(void));
-    void attachB8h (void (*)(void));
-    uint8_t sendData(char buf[], uint8_t data_len);
-    uint8_t recvData(char buf[], uint8_t data_len);
-    void send(uint8_t v);
-    uint8_t recv(void);
-    void sendBit(uint8_t v);
-    uint8_t recvBit(void);
-    uint8_t crc8_alt(char addr[], uint8_t len);
+    #if E2B_ASYNC_RECV
+      //E2B(uint8_t pin);
+      void init(unsigned char rom[8]);
+      void MasterResetPulseDetection();
+      static void ISRPIN();
+      void setScratchpad(unsigned char scratchpad[9]);
+      void setScratchpad_external(char temp_scratchpad[3]);
+      void setPower(uint8_t power);
+      void setTemperature(unsigned char scratchpadtemperature[2]);
+      bool waitForRequest(bool ignore_errors);
+      bool waitForRequestInterrupt(bool ignore_errors);
+      bool waitReset(uint16_t timeout_ms);
+      bool waitReset();
+      bool owsprint();
+      bool presence(uint8_t delta);
+      bool presence();
+      bool searchROM();
+      bool duty();
+      void setResolution(uint8_t resolution);
+      uint8_t getResolution();
+      void attach44h (void (*)(void));
+      void attach48h (void (*)(void));
+      void attachB8h (void (*)(void));
+      uint8_t sendData(char buf[], uint8_t data_len);
+      uint8_t recvData(char buf[], uint8_t data_len);
+      void send(uint8_t v);
+      uint8_t recv(void);
+      void sendBit(uint8_t v);
+      uint8_t recvBit(void);
+      uint8_t crc8_alt(char addr[], uint8_t len);
 
-    uint8_t errnum;
-    char scratchpad[9];           //Originally a private variable
+      uint8_t errnum;
+      char scratchpad[9];           //Originally a private variable
+    #endif
+
+    #if E2B_CRC
+      static uint8_t crc8(const uint8_t *addr, uint8_t len);
+      static bool check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc = 0);
+      static uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc = 0);
+    #endif
+
+    //uint8_t errnum;               //moved insided the #if E2B_ASYNC_RECV
+    //char scratchpad[9];           //moved insided the #if E2B_ASYNC_RECV, Originally a private variable
 };
 
-static E2B* static_OWS_instance;
+#if E2B_ASYNC_RECV
+  static E2B* static_OWS_instance;
+#endif
 
 // Prevent this name from leaking into Arduino sketches
 #ifdef IO_REG_TYPE

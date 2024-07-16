@@ -88,7 +88,7 @@ void loop(void) {
     Serial.print(" ");
   }
   Serial.print(" CRC=");
-  Serial.print(E2B::crc8(data, 8), HEX);
+  //Serial.print(E2B::crc8(data, 8), HEX);
   Serial.println();
 
   // Convert the data to actual temperature
