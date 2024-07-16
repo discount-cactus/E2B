@@ -243,19 +243,6 @@
 #define EXTERNAL 1
 #define PARASITE 0
 
-// Device Family-Code
-/*#define DS18B20	0x28
-#define DS18S20 0x10
-#define DS1822  0x22
-#define DS1820	0x10
-#define DS2423	0x1D*/
-
-// Device resolution
-#define TEMP_9_BIT  0x1F //  9 bit
-#define TEMP_10_BIT 0x3F // 10 bit
-#define TEMP_11_BIT 0x5F // 11 bit
-#define TEMP_12_BIT 0x7F // 12 bit
-
 #define ONEWIRE_NO_ERROR                   0
 #define ONEWIRE_READ_TIMESLOT_TIMEOUT      1
 #define ONEWIRE_WRITE_TIMESLOT_TIMEOUT     2
@@ -319,7 +306,6 @@ class E2B{
       void setScratchpad(unsigned char scratchpad[9]);
       void setScratchpad_external(char temp_scratchpad[3]);
       void setPower(uint8_t power);
-      void setTemperature(unsigned char scratchpadtemperature[2]);
       bool waitForRequest(bool ignore_errors);
       bool waitForRequestInterrupt(bool ignore_errors);
       bool waitReset(uint16_t timeout_ms);
@@ -329,8 +315,6 @@ class E2B{
       bool presence();
       bool searchROM();
       bool duty();
-      void setResolution(uint8_t resolution);
-      uint8_t getResolution();
       void attach44h (void (*)(void));
       void attach48h (void (*)(void));
       void attachB8h (void (*)(void));

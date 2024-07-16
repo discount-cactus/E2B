@@ -622,40 +622,6 @@ void E2B::setPower(uint8_t power) {
   this->power = power;
 }
 
-void E2B::setResolution(uint8_t resolution) {
-	switch (resolution) {
-      case 12:
-      	this->scratchpad[4] = TEMP_12_BIT;
-        break;
-      case 11:
-      	this->scratchpad[4] = TEMP_11_BIT;
-        break;
-      case 10:
-      	this->scratchpad[4] = TEMP_10_BIT;
-        break;
-      case 9:
-      	this->scratchpad[4] = TEMP_9_BIT;
-        break;
-	}
-	this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
-}
-
-uint8_t E2B::getResolution() {
-	switch (scratchpad[4]) {
-      case TEMP_12_BIT:
-        return 12;
-
-      case TEMP_11_BIT:
-        return 11;
-
-      case TEMP_10_BIT:
-        return 10;
-
-      case TEMP_9_BIT:
-        return 9;
-	}
-}
-
 void (*user44hFunc)(void);
 
 void E2B::attach44h(void (*userFunction44h)(void)) {
@@ -823,12 +789,6 @@ bool E2B::duty() {
 void E2B::setScratchpad_external(char temp_scratchpad[3]) {
   for (int i=2; i<5; i++)
     this->scratchpad[i] = temp_scratchpad[i-2];
-  this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
-}
-
-void E2B::setTemperature(unsigned char scratchpadtemperature[2]) {
-	for (int i=0; i<2; i++)
-    this->scratchpad[i] = scratchpadtemperature[i];
   this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
 }
 
