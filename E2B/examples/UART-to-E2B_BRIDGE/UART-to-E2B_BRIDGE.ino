@@ -20,9 +20,9 @@ ATtiny85 TX pin: -> Arduino TX     (pin 1 on Arduino Uno)
 #include <SoftwareSerial.h>
  
 #define E2B_pin 2
-#define rxPin 10 //3
-#define txPin 11 //4
-#define dirPin 5
+#define rxPin 3
+#define txPin 4
+#define dirPin 1
 
 unsigned char rom[8] = {FAMILYCODE, 0xB2, 0xDD, 0x03, 0x00, 0x00, 0x11, 0x00};
 unsigned char scratchpad[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -36,8 +36,8 @@ void setup(){
   attachInterrupt(E2B_pin,respond,CHANGE);
   e2b.init(rom);
   e2b.setScratchpad(scratchpad);
-  Serial.begin(9600);
-  while(!Serial){}
+  //Serial.begin(9600);
+  //while(!Serial){}
   mySerial.begin(9600);
   pinMode(dirPin,INPUT);
 }
@@ -59,7 +59,7 @@ void uart_to_e2b(){
   //Get UART, send E2B
   if (mySerial.available()){
     uint8_t dataUART = mySerial.read();
-    Serial.print(dataUART,HEX);
+    //Serial.print(dataUART,HEX);
     
     boolean present;
     present = e2b.reset();                // device present var
@@ -75,5 +75,5 @@ void e2b_to_uart(){
   e2b.waitForRequest(false);
   uint8_t dataE2B = e2b.scratchpad[4];
   mySerial.write(dataE2B);
-  Serial.println(dataE2B,HEX);
+  //Serial.println(dataE2B,HEX);
 }

@@ -737,7 +737,7 @@ bool E2B::recvAndProcessCmd() {
 
   for (;;) {
     uint8_t cmd = recv();
-    //scratchpad[4] = cmd;                  //Added by me on 7-15-24 for transceiver functionality, replaces slot for temperature resolution, moved to duty();
+    //scratchpad[4] = cmd;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution, moved to duty();
     switch (cmd) {
       case 0xF0: // SEARCH ROM
         searchROM();
@@ -777,7 +777,7 @@ bool E2B::recvAndProcessCmd() {
 
 bool E2B::duty() {
 	uint8_t done = recv();
-  scratchpad[4] = done;                  //Added by me on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
+  scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
 	switch (done) {
 		case 0xBE: // READ SCREATCHPAD
 			sendData(scratchpad, 9);
