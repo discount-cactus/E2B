@@ -797,6 +797,11 @@ bool E2B::duty() {
 	}
 }
 
+//
+uint8_t E2B::getScratchpad(uint8_t i){
+  return scratchpad[i];
+}
+
 void E2B::setScratchpad_external(char temp_scratchpad[3]) {
   for (int i=2; i<5; i++)
     this->scratchpad[i] = temp_scratchpad[i-2];

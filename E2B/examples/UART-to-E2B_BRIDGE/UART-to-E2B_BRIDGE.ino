@@ -38,6 +38,7 @@ void setup(){
   e2b.setScratchpad(scratchpad);
   //Serial.begin(9600);
   //while(!Serial){}
+  e2b.setDeviceType(TRANSCEIVER);
   mySerial.begin(9600);
   pinMode(dirPin,INPUT);
 }

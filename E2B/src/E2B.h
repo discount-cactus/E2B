@@ -129,6 +129,7 @@ class E2B{
       bool presence();
       bool searchROM();
       bool duty();
+      uint8_t getScratchpad(uint8_t i);
       void attachUserCommand(uint8_t num, void (*)(void));
       //void attach44h (void (*)(void));
       //void attach48h (void (*)(void));
