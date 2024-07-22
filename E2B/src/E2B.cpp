@@ -224,9 +224,23 @@ void E2B::begin(uint8_t pin){
 	bitmask = PIN_TO_BITMASK(_pin);
 	baseReg = PIN_TO_BASEREG(_pin);
 
+  deviceType = BUS;
+
   #if E2B_SEARCH
 	 reset_search();
   #endif
+}
+
+//Sets the type of device
+// 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
+void E2B::setDeviceType(uint8_t type){
+  deviceType = type;
+}
+
+//Returns the type of the device
+// 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
+uint8_t E2B::getDeviceType(){
+  return deviceType;
 }
 
 

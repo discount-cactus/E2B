@@ -43,6 +43,12 @@
 #define highmark  900
 #endif
 
+//Device type
+#define DEFAULT 0
+#define BUS 0             //BUS (Deafult): Includes error-checking during communication
+#define POINTTOPOINT 1    //POINTTOPOINT: Does NOT include error-checking during communication
+#define TRANSCEIVER 2     //TRANSCEIVER: Does NOT include error-checking during communication
+
 // Device Power-Source
 #define EXTERNAL 1
 #define PARASITE 0
@@ -70,6 +76,8 @@ class E2B{
     uint8_t LastFamilyDiscrepancy;
     bool LastDeviceFlag;
 
+    uint8_t deviceType;
+
     //E2Bslave
     #if E2B_ASYNC_RECV
       bool recvAndProcessCmd();
@@ -86,6 +94,8 @@ class E2B{
     E2B() { }
     E2B(uint8_t pin) { begin(pin); }
     void begin(uint8_t pin);
+    void setDeviceType(uint8_t type);
+    uint8_t getDeviceType();
     uint8_t reset(void);
     void select(const uint8_t rom[8]);
     void skip(void);
