@@ -8,10 +8,10 @@ MCU's can be connected in two ways: Directly with an interrupt pin or with a tra
 
 ## Design considerations
 ### On-Board
-E2B lines require a pull-up resistor - typically 4.7kohm but anywhere between 1k-10kohm range. For the host MCU, if other MCU's are connected to the E2B line, the host MCU will require the E2B line be connected to an interrupt pin. If only 1-Wire devices are connected, any digital GPIO line will suffice. It is important to note that all connected devices be grounded together.
+E2B lines require a pull-up resistor - typically 4.7kohm but anywhere between 1k-10kohm range. For the host MCU, if other MCU's are connected to the E2B line, the host MCU will require the E2B line be connected to an interrupt pin. If only 1-Wire devices are connected, any digital GPIO line will suffice. Verifying all devices are connected to the same voltage supply is important to avoid accidental brown-outs or overvoltaging devices. If this is not possible, consider using level shifters. It is important to note that all connected devices be grounded together.
 
 ### Off-Board
-For connecting to off-board devices, it is preferable to set the host device type to BUS (or DEFAULT) to ensure error-checking is transmitted. Most MCU's pull up E2B lines with 5V or 3.3V, so the voltage drop can be quite significant as large-gauge wires get longer. Voltage drop can be mitigated with thicker wires, impedance matching, or with additional circuitry to increase the voltage. As with on-board devices, it is important to note that all connected devices be grounded together with solid connections.
+For connecting to off-board devices, it is preferable to set the host device type to BUS (or DEFAULT) to ensure error-checking is transmitted. Most MCU's pull up E2B lines with 5V or 3.3V, so the voltage drop can be quite significant as large-gauge wires get longer. Voltage drop can be mitigated with thicker wires, impedance matching, or with additional circuitry to increase the voltage. Verifying all devices are connected to the same voltage supply is important to avoid accidental brown-outs or overvoltaging devices. If this is not possible, consider using level shifters. As with on-board devices, it is important to note that all connected devices be grounded together with solid connections.
 
 ### Limitations
 - Because of a given device's ROM address, there can (in theory) be up to 2^64 devices connected to a given E2B line. A good rule of thumb is to keep the device count below 64 at the very most.
