@@ -7,7 +7,7 @@
 #if defined(__AVR__)
 #define IO_REG_TYPE uint8_t
 
-#if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
+#if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__) || defined(__AVR_ATtiny13__) || defined(__AVR_ATtiny10__)
 #define FAMILYCODE 0xA0
 #else
 #define FAMILYCODE 0xA1
@@ -50,11 +50,15 @@
 #elif defined(__arc__) /* Arduino101/Genuino101 specifics */
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAD
-#elif defined(__riscv)
+#elif defined(CH32V20x) || defined(CH32V203xB) || defined(CH32V208) || defined(CH32V30x) || defined(CH32V30x_C) || defined(CH32V10x) || defined(CH32V00x) || defined(CH32X035)
+#error "CH32 support does not exist (yet)"
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAE
+#elif defined(__riscv)
+#define IO_REG_TYPE uint32_t
+#define FAMILYCODE 0xAF
 #else
 #define IO_REG_TYPE unsigned int
-#define FAMILYCODE 0xAF
+#define FAMILYCODE 0xB0
 #endif
 #endif

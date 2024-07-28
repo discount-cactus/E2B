@@ -88,6 +88,15 @@ int pinScan(int pin){
       case 0xA1:
         Serial.print("\t\tArduino");
         break;
+      case 0xA7:
+        Serial.print("\t\tESP32");
+        break;
+      case 0xA8:
+        Serial.print("\t\tSTM32");
+        break;
+      case 0xA9:
+        Serial.print("\t\tSAMD21");
+        break;
     }
     
     //CRC check
