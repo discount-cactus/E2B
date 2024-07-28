@@ -85,9 +85,6 @@ class E2B{
       uint8_t waitTimeSlotRead();
       uint8_t power;
       char rom[8];
-      //char scratchpad[9];           //Moved to be a public variable
-      char temp_scratchpad[3];
-      char scratchpadtemperature[2];
     #endif
 
   public:
@@ -96,6 +93,7 @@ class E2B{
     void begin(uint8_t pin);
     void setDeviceType(uint8_t type);
     uint8_t getDeviceType();
+    void generateROM(unsigned char *newAddr);
     uint8_t reset(void);
     void select(const uint8_t rom[8]);
     void skip(void);
@@ -118,7 +116,6 @@ class E2B{
       void MasterResetPulseDetection();
       static void ISRPIN();
       void setScratchpad(unsigned char scratchpad[9]);
-      void setScratchpad_external(char temp_scratchpad[3]);
       void setPower(uint8_t power);
       bool waitForRequest(bool ignore_errors);
       bool waitForRequestInterrupt(bool ignore_errors);
@@ -151,13 +148,10 @@ class E2B{
       static bool check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc = 0);
       static uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc = 0);
     #endif
-
-    //uint8_t errnum;               //moved insided the #if E2B_ASYNC_RECV
-    //char scratchpad[9];           //moved insided the #if E2B_ASYNC_RECV, Originally a private variable
 };
 
 #if E2B_ASYNC_RECV
-  static E2B* static_OWS_instance;
+  static E2B* static_E2B_instance;
 #endif
 
 // Prevent this name from leaking into Arduino sketches

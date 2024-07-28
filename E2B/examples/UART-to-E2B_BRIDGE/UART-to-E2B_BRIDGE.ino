@@ -14,7 +14,6 @@
 Hookup :
 ATtiny85 RX pin: -> Arduino RX     (pin 0 on Arduino Uno)
 ATtiny85 TX pin: -> Arduino TX     (pin 1 on Arduino Uno)
-
 */
 #include <E2B.h>
 #include <SoftwareSerial.h>

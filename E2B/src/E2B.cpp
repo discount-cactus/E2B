@@ -212,7 +212,7 @@ sample code bearing this copyright.
   #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
 
   void E2B::ISRPIN() {
-    (*static_OWS_instance).MasterResetPulseDetection();
+    (*static_E2B_instance).MasterResetPulseDetection();
   }
 #endif
 
@@ -241,6 +241,12 @@ void E2B::setDeviceType(uint8_t type){
 // 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
 uint8_t E2B::getDeviceType(){
   return deviceType;
+}
+
+//Rewrites to device rom to a new, random value
+void E2B::generateROM(unsigned char *newAddr){
+  newAddr[0] = FAMILYCODE;
+  for (int i=1; i < 8; i++) newAddr[i] = random(256);
 }
 
 
@@ -781,12 +787,12 @@ bool E2B::duty() {
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
 			break;
-		case 0x4E: // WRITE SCREATCHPAD
+		/*case 0x4E: // WRITE SCREATCHPAD
 			recvData(temp_scratchpad, 3);
 			setScratchpad_external(temp_scratchpad);
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
-			break;
+			break;*/
 		default:
 			break;
 			if (errnum == ONEWIRE_NO_ERROR)
@@ -797,15 +803,9 @@ bool E2B::duty() {
 	}
 }
 
-//
+//Returns a byte of data from the specified index in the scratchpad
 uint8_t E2B::getScratchpad(uint8_t i){
   return scratchpad[i];
-}
-
-void E2B::setScratchpad_external(char temp_scratchpad[3]) {
-  for (int i=2; i<5; i++)
-    this->scratchpad[i] = temp_scratchpad[i-2];
-  this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
 }
 
 bool E2B::searchROM() {
