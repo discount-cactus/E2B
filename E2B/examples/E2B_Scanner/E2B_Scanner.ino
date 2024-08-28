@@ -58,6 +58,12 @@ int pinScan(int pin){
       default:
         Serial.print("\t\tUnknown");
         return;
+      case FAMILYCODE_HOST:
+        Serial.print("\t\tHOST");
+        break;
+       case FAMILYCODE_TRANSCEIVER:
+        Serial.print("\t\tTRANSCEIVER");
+        break;
       case 0x10:
         Serial.print("\t\tDS18S20");  // or old DS1820
         break;

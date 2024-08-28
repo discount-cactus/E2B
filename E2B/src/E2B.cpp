@@ -224,7 +224,10 @@ void E2B::begin(uint8_t pin){
 	bitmask = PIN_TO_BITMASK(_pin);
 	baseReg = PIN_TO_BASEREG(_pin);
 
-  deviceType = BUS;
+  busType = BUS;
+  secureFlag = 0;
+  isLocked = 0;
+  secureKey = 0x00;
 
   #if E2B_SEARCH
 	 reset_search();
@@ -233,14 +236,50 @@ void E2B::begin(uint8_t pin){
 
 //Sets the type of device
 // 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
-void E2B::setDeviceType(uint8_t type){
-  deviceType = type;
+void E2B::setBusType(uint8_t type){
+  busType = type;
 }
 
 //Returns the type of the device
 // 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
-uint8_t E2B::getDeviceType(){
-  return deviceType;
+uint8_t E2B::getBusType(){
+  return busType;
+}
+
+//Sets the level of the hostFlag
+//Meant for use in multi-master buses.
+void E2B::setHostFlag(unsigned char *newAddr, bool level){
+  secureFlag = level;
+  if(level){
+    newAddr[0] = FAMILYCODE_HOST;
+    newAddr[1] = FAMILYCODE;
+    #warning "Device address changed. newAddr[0] = FAMILYCODE_HOST; newAddr[1] = FAMILYCODE_DEVICE;"
+  }
+}
+
+//Returns the level of the hostFlag - if the device is the bus host or not. Meant for use in multi-master buses.
+bool E2B::getHostFlag(){
+  return secureFlag;
+}
+
+//Sets the level of the secureFlag
+//Sets the device as secured/locked or unsecured/unlocked. DEFAULTED to 0.
+//When secureFlag is set to 1, special procedures must be taken to communicate with the device.
+void E2B::setSecureFlag(uint8_t level, uint8_t key){
+  secureFlag = level;
+
+  if(level){
+    isLocked = 1;
+    secureKey = key;
+  }else{
+    isLocked = 0;
+    #warning "Device secureFlag deactivated."
+  }
+}
+
+//Returns the level of the secureFlag - if the device is secured/locked or unsecured/unlocked.
+bool E2B::getSecureFlag(){
+  return secureFlag;
 }
 
 //Rewrites to device rom to a new, random value
@@ -341,21 +380,21 @@ uint8_t E2B::read_bit(void){
 // other mishap.
 //
 void E2B::write(uint8_t v, uint8_t power /* = 0 */) {
-    uint8_t bitMask;
+  uint8_t bitMask;
 
-    for (bitMask = 0x01; bitMask; bitMask <<= 1) {
-	E2B::write_bit( (bitMask & v)?1:0);
-    }
-    if ( !power) {
-	noInterrupts();
-	DIRECT_MODE_INPUT(baseReg, bitmask);
-	DIRECT_WRITE_LOW(baseReg, bitmask);
-	interrupts();
-    }
+  for (bitMask = 0x01; bitMask; bitMask <<= 1){
+     E2B::write_bit((bitMask & v)?1:0);
+  }
+  if(!power){
+  	noInterrupts();
+  	DIRECT_MODE_INPUT(baseReg, bitmask);
+  	DIRECT_WRITE_LOW(baseReg, bitmask);
+  	interrupts();
+  }
 }
 
 void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */) {
-  for (uint16_t i = 0 ; i < count ; i++)
+  for (uint16_t i=0; i < count ; i++)
     write(buf[i]);
   if (!power) {
     noInterrupts();
@@ -399,6 +438,13 @@ void E2B::select(const uint8_t rom[8]){
 //
 void E2B::skip(){
     write(0xCC);           // Skip ROM
+}
+
+//Requests an unlock to a device with a secureFlag = 1.
+//This will unlock the secured device for one command.
+void E2B::unlock(uint8_t key){
+    write(0x3A);
+    //write(key);
 }
 
 void E2B::depower(){
@@ -565,7 +611,125 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
       for (int i = 0; i < 8; i++) newAddr[i] = ROM_NO[i];
    }
    return search_result;
-  }
+}
+
+// Performs an E2B search and logs the addresses to a struct.
+bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode /* = true */){
+   uint8_t id_bit_number;
+   uint8_t last_zero, rom_byte_number;
+   bool    search_result;
+   uint8_t id_bit, cmp_id_bit;
+   unsigned char rom_byte_mask, search_direction;
+
+   // initialize for search
+   id_bit_number = 1;
+   last_zero = 0;
+   rom_byte_number = 0;
+   rom_byte_mask = 1;
+   search_result = false;
+
+   // if the last call was not the last one
+   if (!LastDeviceFlag){
+      // 1-Wire reset
+      if (!reset()){
+         // reset the search
+         LastDiscrepancy = 0;
+         LastDeviceFlag = false;
+         LastFamilyDiscrepancy = 0;
+         return false;
+      }
+
+      // issue the search command
+      if(search_mode == true){
+        write(0xF0);   // NORMAL SEARCH
+      }else{
+        write(0xEC);   // CONDITIONAL SEARCH
+      }
+
+      // loop to do the search
+      do{
+         // read a bit and its complement
+         id_bit = read_bit();
+         cmp_id_bit = read_bit();
+
+         // check for no devices on 1-wire
+         if ((id_bit == 1) && (cmp_id_bit == 1)){
+            break;
+         }else{
+            // all devices coupled have 0 or 1
+            if (id_bit != cmp_id_bit){
+               search_direction = id_bit;  // bit write value for search
+            } else {
+               // if this discrepancy if before the Last Discrepancy
+               // on a previous next then pick the same as last time
+               if (id_bit_number < LastDiscrepancy){
+                  search_direction = ((ROM_NO[rom_byte_number] & rom_byte_mask) > 0);
+               } else {
+                  // if equal to last pick 1, if not then pick 0
+                  search_direction = (id_bit_number == LastDiscrepancy);
+               }
+               // if 0 was picked then record its position in LastZero
+               if (search_direction == 0){
+                  last_zero = id_bit_number;
+
+                  // check for Last discrepancy in family
+                  if (last_zero < 9)
+                     LastFamilyDiscrepancy = last_zero;
+               }
+            }
+
+            // set or clear the bit in the ROM byte rom_byte_number
+            // with mask rom_byte_mask
+            if(search_direction == 1)
+              ROM_NO[rom_byte_number] |= rom_byte_mask;
+            else
+              ROM_NO[rom_byte_number] &= ~rom_byte_mask;
+
+            // serial number search direction write bit
+            write_bit(search_direction);
+
+            // increment the byte counter id_bit_number
+            // and shift the mask rom_byte_mask
+            id_bit_number++;
+            rom_byte_mask <<= 1;
+
+            // if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
+            if (rom_byte_mask == 0) {
+                rom_byte_number++;
+                rom_byte_mask = 1;
+            }
+         }
+      }
+      while(rom_byte_number < 8);  // loop until through all ROM bytes 0-7
+
+      // if the search was successful then
+      if (!(id_bit_number < 65)){
+      	// search successful so set LastDiscrepancy,LastDeviceFlag,search_result
+        LastDiscrepancy = last_zero;
+
+        // check for last device
+        if (LastDiscrepancy == 0){
+        	LastDeviceFlag = true;
+        }
+        	search_result = true;
+      }
+   }
+
+   // if no device found then reset counters so next 'search' will be like a first
+   if (!search_result || !ROM_NO[0]){
+      LastDiscrepancy = 0;
+      LastDeviceFlag = false;
+      LastFamilyDiscrepancy = 0;
+      search_result = false;
+   }else{
+      for(int i=0; i < 8; i++){
+				newAddr[i] = ROM_NO[i];
+				//searchLog[i] = newAddr[i];		//Adds the new address to the searchLog database
+				searchLog[i] = ROM_NO[i];
+			}
+   }
+	 return search_result;
+}
 
 #endif    //E2B_SEARCH
 
@@ -580,7 +744,7 @@ volatile long previous = 0;
 volatile long old_previous = 0;
 volatile long diff = 0;
 
-void E2B::MasterResetPulseDetection() {
+void E2B::MasterResetPulseDetection(){
   old_previous = previous;
   previous = micros();
   diff = previous - old_previous;
@@ -720,7 +884,20 @@ bool E2B::recvAndProcessCmd() {
 
   for (;;) {
     uint8_t cmd = recv();
-    //scratchpad[4] = cmd;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution, moved to duty();
+
+    if (secureFlag == 1){       //If a secure device
+      if (isLocked){
+        if ((cmd != 0xCC) && (cmd != 0x55)){       //0xCC is an SKIP ROM command, 0x55 is an SELECT ROM command
+          //errnum = E2B_SECURED_AND_LOCKED;
+          #warning "Attempted communication with locked secured device."
+          return false;
+        }
+      }else{
+        isLocked = 1;
+        #warning "Device re-locked."
+      }
+    }
+
     switch (cmd) {
       case 0xF0: // SEARCH ROM
         searchROM();
@@ -736,6 +913,11 @@ bool E2B::recvAndProcessCmd() {
         if (errnum != ONEWIRE_NO_ERROR)
           return false;
         break;
+      /*case 0x3A: // UNLOCK REQUEST
+        duty();
+        if (errnum != ONEWIRE_NO_ERROR)
+          return false;
+        break;*/
       case 0x55: // MATCH ROM - Choose/Select ROM
         recvData(addr, 8);
         if (errnum != ONEWIRE_NO_ERROR)
@@ -761,14 +943,21 @@ bool E2B::recvAndProcessCmd() {
 bool E2B::duty() {
 	uint8_t done = recv();
   scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
-	switch (done) {
-		case 0xBE: // READ SCREATCHPAD
+
+  switch (done) {
+    case 0xBE: // READ SCREATCHPAD
 			sendData(scratchpad, 9);
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
 			break;
 		case 0xB4: // READ POWERSOURCE
 			sendBit(power);
+			if (errnum != ONEWIRE_NO_ERROR)
+				return false;
+			break;
+    case 0x3A: // UNLOCK REQUEST
+			isLocked = 0;
+      #warning "Secured device unlocked for 1 command."
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
 			break;
@@ -800,7 +989,7 @@ bool E2B::duty() {
 			else
 				return false;
 	return true;
-	}
+  }
 }
 
 //Returns a byte of data from the specified index in the scratchpad
@@ -809,22 +998,24 @@ uint8_t E2B::getScratchpad(uint8_t i){
 }
 
 bool E2B::searchROM() {
-  uint8_t bitmask;
-  uint8_t bit_send, bit_recv;
+  //if(!secureFlag){                //Only runs function (shows up on a search) if secureFlag is 0.
+    uint8_t bitmask;
+    uint8_t bit_send, bit_recv;
 
-  for (int i=0; i<8; i++) {
-    for (bitmask = 0x01; bitmask; bitmask <<= 1) {
-      bit_send = (bitmask & rom[i])?1:0;
-      sendBit(bit_send);
-      sendBit(!bit_send);
-      bit_recv = recvBit();
-      if (errnum != ONEWIRE_NO_ERROR)
-        return false;
-      if (bit_recv != bit_send)
-        return false;
+    for (int i=0; i<8; i++) {
+      for (bitmask = 0x01; bitmask; bitmask <<= 1) {
+        bit_send = (bitmask & rom[i])?1:0;
+        sendBit(bit_send);
+        sendBit(!bit_send);
+        bit_recv = recvBit();
+        if (errnum != ONEWIRE_NO_ERROR)
+          return false;
+        if (bit_recv != bit_send)
+          return false;
+      }
     }
-  }
-  return true;
+    return true;
+  //}
 }
 
 bool E2B::waitReset(uint16_t timeout_ms) {
@@ -1092,7 +1283,7 @@ uint8_t E2B::waitTimeSlotRead() {
 }
 
 //
-// Compute a Dallas Semiconductor 8 bit CRC directly.
+// Compute a Dallas Semiconductor 8-bit CRC directly.
 //
 uint8_t E2B::crc8_alt(char addr[], uint8_t len) {
   uint8_t crc = 0;
@@ -1196,3 +1387,13 @@ uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
 }
 
 #endif    //E2B_CRC
+
+#if E2B_CHECKSUM
+// Computes an standard XOR checksum
+uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
+  uint8_t checksum = 0;
+  for (int i=0; i < len; i++) checksum ^= addr[i];
+	return checksum;
+}
+
+#endif    //E2B_CHECKSUM

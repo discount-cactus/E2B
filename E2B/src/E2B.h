@@ -1,11 +1,13 @@
 #ifndef E2B_h
 #define E2B_h
 
+//#include <inttypes.h>     //Added 7-30-24. Placed under OneWireSlave_h in OneWireSlave.h so may need this
+
 #ifdef __cplusplus
 
 #include <stdint.h>
 
-#if defined(__AVR__)
+#if defined(__AVR__)        //May not need this??????
 #include <util/crc16.h>
 #endif
 
@@ -24,14 +26,19 @@
 #define E2B_ASYNC_RECV 1
 #endif
 
-// you can exclude e2b search by defining this to 0
+// you can exclude E2B search by defining this to 0
 #ifndef E2B_SEARCH
 #define E2B_SEARCH 1
 #endif
 
-// you can exclude e2b CRC by defining this to 0
+// you can exclude E2B CRC by defining this to 0
 #ifndef E2B_CRC
 #define E2B_CRC 1
+#endif
+
+// you can exclude E2B Checksum by defining this to 0, defaulted to 0
+#ifndef E2B_CHECKSUM
+#define E2B_CHECKSUM 0
 #endif
 
 #if defined(__SAM3X8E__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__PIC32MX__)
@@ -49,6 +56,9 @@
 #define POINTTOPOINT 1    //POINTTOPOINT: Does NOT include error-checking during communication
 #define TRANSCEIVER 2     //TRANSCEIVER: Does NOT include error-checking during communication
 
+#define FAMILYCODE_HOST 0x31
+#define FAMILYCODE_TRANSCEIVER 0x32
+
 // Device Power-Source
 #define EXTERNAL 1
 #define PARASITE 0
@@ -63,6 +73,7 @@
 #define ONEWIRE_READ_TIMESLOT_TIMEOUT_LOW  7
 #define ONEWIRE_READ_TIMESLOT_TIMEOUT_HIGH 8
 
+#define E2B_SECURED_AND_LOCKED             9
 
 class E2B{
   private:
@@ -76,7 +87,11 @@ class E2B{
     uint8_t LastFamilyDiscrepancy;
     bool LastDeviceFlag;
 
-    uint8_t deviceType;
+    uint8_t busType;
+    bool hostFlag;
+    bool secureFlag;
+    bool isLocked;
+    uint8_t secureKey;
 
     //E2Bslave
     #if E2B_ASYNC_RECV
@@ -91,12 +106,17 @@ class E2B{
     E2B() { }
     E2B(uint8_t pin) { begin(pin); }
     void begin(uint8_t pin);
-    void setDeviceType(uint8_t type);
-    uint8_t getDeviceType();
+    void setBusType(uint8_t type);
+    uint8_t getBusType();
+    void setHostFlag(unsigned char *newAddr, bool level);
+    bool getHostFlag();
+    void setSecureFlag(uint8_t level, uint8_t key = 0);
+    bool getSecureFlag();
     void generateROM(unsigned char *newAddr);
     uint8_t reset(void);
     void select(const uint8_t rom[8]);
     void skip(void);
+    void unlock(uint8_t key);
     void write(uint8_t v, uint8_t power = 0);
     void write_bytes(const uint8_t *buf, uint16_t count, bool power = 0);
     uint8_t read(void);
@@ -108,6 +128,7 @@ class E2B{
       void reset_search();
       void target_search(uint8_t family_code);
       bool search(uint8_t *newAddr, bool search_mode = true);
+      bool search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode = true);
     #endif
 
     #if E2B_ASYNC_RECV
@@ -147,6 +168,9 @@ class E2B{
       static uint8_t crc8(const uint8_t *addr, uint8_t len);
       static bool check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc = 0);
       static uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc = 0);
+    #endif
+    #if E2B_CHECKSUM
+      static uint8_t checksum(const uint8_t *addr, uint8_t len);
     #endif
 };
 

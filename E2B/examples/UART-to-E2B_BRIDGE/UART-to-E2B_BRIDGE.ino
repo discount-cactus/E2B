@@ -23,7 +23,7 @@ ATtiny85 TX pin: -> Arduino TX     (pin 1 on Arduino Uno)
 #define txPin 4
 #define dirPin 1
 
-unsigned char rom[8] = {FAMILYCODE, 0xB2, 0xDD, 0x03, 0x00, 0x00, 0x11, 0x00};
+unsigned char rom[8] = {FAMILYCODE_TRANSCEIVER, FAMILYCODE, 0xDD, 0x03, 0x00, 0x00, 0x11, 0x00};
 unsigned char scratchpad[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 //byte localscratchpad[9]; // buffer for data
 //byte addr[8]; // 64-bit device address
@@ -37,7 +37,7 @@ void setup(){
   e2b.setScratchpad(scratchpad);
   //Serial.begin(9600);
   //while(!Serial){}
-  e2b.setDeviceType(TRANSCEIVER);
+  e2b.setBusType(TRANSCEIVER);
   mySerial.begin(9600);
   pinMode(dirPin,INPUT);
 }

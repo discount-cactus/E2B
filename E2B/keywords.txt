@@ -12,21 +12,27 @@ E2B	KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
-reset	KEYWORD2
+setBusType  KEYWORD2
+getBusType KEYWORD2
+setHostFlag  KEYWORD2
+getHostFlag  KEYWORD2
+setSecureFlag  KEYWORD2
+getSecureFlag  KEYWORD2
+generateROM  KEYWORD2
 write_bit	KEYWORD2
 read_bit	KEYWORD2
 write	KEYWORD2
 write_bytes	KEYWORD2
 read	KEYWORD2
 read_bytes	KEYWORD2
+reset	KEYWORD2
 select	KEYWORD2
 skip	KEYWORD2
+unlock	KEYWORD2
 depower	KEYWORD2
 reset_search	KEYWORD2
 search	KEYWORD2
-crc8	KEYWORD2
-crc16	KEYWORD2
-check_crc16	KEYWORD2
+search_and_log	KEYWORD2
 
 setRom	KEYWORD2
 presence	KEYWORD2
@@ -43,7 +49,12 @@ recvData	KEYWORD2
 waitReset	KEYWORD2
 presence	KEYWORD2
 searchROM		KEYWORD2
-crc8_alt		KEYWORD2
+
+crc8	KEYWORD2
+crc8_alt	KEYWORD2
+crc16	KEYWORD2
+check_crc16	KEYWORD2
+checksum	KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)
@@ -53,3 +64,13 @@ crc8_alt		KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
+
+DEFAULT	LITERAL1
+BUS	LITERAL1
+POINTTOPOINT	LITERAL1
+TRANSCEIVER	LITERAL1
+EXTERNAL	LITERAL1
+PARASITE	LITERAL1
+FAMILYCODE	LITERAL1
+FAMILYCODE_HOST LITERAL1
+FAMILYCODE_TRANSCEIVER  LITERAL1
