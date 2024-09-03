@@ -227,6 +227,7 @@ void E2B::begin(uint8_t pin){
   busType = BUS;
   secureFlag = 0;
   isLocked = 0;
+  unlockedState = 0;
   secureKey = 0x00;
 
   #if E2B_SEARCH
@@ -270,6 +271,7 @@ void E2B::setSecureFlag(uint8_t level, uint8_t key){
 
   if(level){
     isLocked = 1;
+    unlockedState = 0;
     secureKey = key;
   }else{
     isLocked = 0;
@@ -444,7 +446,7 @@ void E2B::skip(){
 //This will unlock the secured device for one command.
 void E2B::unlock(uint8_t key){
     write(0x3A);
-    //write(key);
+    write(key);
 }
 
 void E2B::depower(){
@@ -882,23 +884,24 @@ bool E2B::recvAndProcessCmd() {
   uint8_t oldSREG = 0;
   uint16_t raw = 0;
 
-  for (;;) {
+  for (;;){
     uint8_t cmd = recv();
 
     if (secureFlag == 1){       //If a secure device
       if (isLocked){
         if ((cmd != 0xCC) && (cmd != 0x55)){       //0xCC is an SKIP ROM command, 0x55 is an SELECT ROM command
           //errnum = E2B_SECURED_AND_LOCKED;
-          #warning "Attempted communication with locked secured device."
+          //#warning "Attempted communication with locked secured device."
           return false;
         }
       }else{
-        isLocked = 1;
-        #warning "Device re-locked."
+        if(unlockedState > 0){  //If you still have retries
+          unlockedState -= 1;
+        }
       }
     }
 
-    switch (cmd) {
+    switch(cmd){
       case 0xF0: // SEARCH ROM
         searchROM();
         //delayMicroseconds(6900);
@@ -913,11 +916,6 @@ bool E2B::recvAndProcessCmd() {
         if (errnum != ONEWIRE_NO_ERROR)
           return false;
         break;
-      /*case 0x3A: // UNLOCK REQUEST
-        duty();
-        if (errnum != ONEWIRE_NO_ERROR)
-          return false;
-        break;*/
       case 0x55: // MATCH ROM - Choose/Select ROM
         recvData(addr, 8);
         if (errnum != ONEWIRE_NO_ERROR)
@@ -938,6 +936,11 @@ bool E2B::recvAndProcessCmd() {
           return false;
     }
   }
+
+  if(unlockedState <= 0){  //If you run out of retries
+    isLocked = 1;
+    #warning "Device re-locked."
+  }
 }
 
 bool E2B::duty() {
@@ -956,8 +959,12 @@ bool E2B::duty() {
 				return false;
 			break;
     case 0x3A: // UNLOCK REQUEST
-			isLocked = 0;
-      #warning "Secured device unlocked for 1 command."
+      uint8_t receivedKey = recv();
+      if(receivedKey == secureKey){ //Unlocks the device if receivedKey matches the key of the secured device (unlocked for thr commands)
+        isLocked = 0;
+        unlockedState = 3;    //Processes 3 commands before locking again
+        //#warning "Secured device unlocked for 3 commands."
+      }
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
 			break;
@@ -998,24 +1005,22 @@ uint8_t E2B::getScratchpad(uint8_t i){
 }
 
 bool E2B::searchROM() {
-  //if(!secureFlag){                //Only runs function (shows up on a search) if secureFlag is 0.
-    uint8_t bitmask;
-    uint8_t bit_send, bit_recv;
+  uint8_t bitmask;
+  uint8_t bit_send, bit_recv;
 
-    for (int i=0; i<8; i++) {
-      for (bitmask = 0x01; bitmask; bitmask <<= 1) {
-        bit_send = (bitmask & rom[i])?1:0;
-        sendBit(bit_send);
-        sendBit(!bit_send);
-        bit_recv = recvBit();
-        if (errnum != ONEWIRE_NO_ERROR)
-          return false;
-        if (bit_recv != bit_send)
-          return false;
-      }
+  for (int i=0; i<8; i++) {
+    for (bitmask = 0x01; bitmask; bitmask <<= 1) {
+      bit_send = (bitmask & rom[i])?1:0;
+      sendBit(bit_send);
+      sendBit(!bit_send);
+      bit_recv = recvBit();
+      if (errnum != ONEWIRE_NO_ERROR)
+        return false;
+      if (bit_recv != bit_send)
+        return false;
     }
-    return true;
-  //}
+  }
+  return true;
 }
 
 bool E2B::waitReset(uint16_t timeout_ms) {

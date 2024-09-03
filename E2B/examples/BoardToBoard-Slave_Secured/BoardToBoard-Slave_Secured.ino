@@ -10,7 +10,10 @@ match the KEY variable in this sketch to successfully unlock.
 UNLOCK SEQUENCE:
 e2b.reset();
 e2b.skip();         //DO NOT USE e2b.select(addr);
-e2b.unlock(0x30);
+e2b.unlock(KEY);
+
+e2b.reset();
+e2b.skip();         //DO NOT USE e2b.select(addr);
 e2b.write(data);
 
 */

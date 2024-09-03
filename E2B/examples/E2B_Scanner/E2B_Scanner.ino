@@ -25,7 +25,7 @@ void loop(){
 
 int pinScan(int pin){
   E2B e2b(pin);
-  e2b.init(rom);
+  //e2b.init(rom);
   int num = 0;
 
   byte i;
@@ -57,7 +57,7 @@ int pinScan(int pin){
     switch(addr[0]){
       default:
         Serial.print("\t\tUnknown");
-        return;
+        break;
       case FAMILYCODE_HOST:
         Serial.print("\t\tHOST");
         break;
