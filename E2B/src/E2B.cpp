@@ -225,6 +225,7 @@ void E2B::begin(uint8_t pin){
 	baseReg = PIN_TO_BASEREG(_pin);
 
   busType = BUS;
+  hostFlag = 0;
   secureFlag = 0;
   isLocked = 0;
   unlockedState = 0;
@@ -250,7 +251,7 @@ uint8_t E2B::getBusType(){
 //Sets the level of the hostFlag
 //Meant for use in multi-master buses.
 void E2B::setHostFlag(unsigned char *newAddr, bool level){
-  secureFlag = level;
+  hostFlag = level;
   if(level){
     newAddr[0] = FAMILYCODE_HOST;
     newAddr[1] = FAMILYCODE;
@@ -260,7 +261,7 @@ void E2B::setHostFlag(unsigned char *newAddr, bool level){
 
 //Returns the level of the hostFlag - if the device is the bus host or not. Meant for use in multi-master buses.
 bool E2B::getHostFlag(){
-  return secureFlag;
+  return hostFlag;
 }
 
 //Sets the level of the secureFlag
@@ -447,6 +448,7 @@ void E2B::skip(){
 void E2B::unlock(uint8_t key){
     write(0x3A);
     write(key);
+    //delay(13);
 }
 
 void E2B::depower(){
@@ -848,8 +850,7 @@ bool E2B::waitForRequest(bool ignore_errors) {
     }
     else if ((errnum == ONEWIRE_NO_ERROR) || ignore_errors) {
       continue;
-    }
-    else {
+    } else {
       return false;
     }
   }
@@ -873,15 +874,13 @@ bool E2B::waitForRequestInterrupt(bool ignore_errors) {
   while (recvAndProcessCmd() ) {};
   if ((errnum == ONEWIRE_NO_ERROR) || ignore_errors) {
     //continue;
-  }
-  else {
+  } else {
     return false;
   }
 }
 
 bool E2B::recvAndProcessCmd() {
 	char addr[8];
-  uint8_t oldSREG = 0;
   uint16_t raw = 0;
 
   for (;;){
@@ -889,7 +888,7 @@ bool E2B::recvAndProcessCmd() {
 
     if (secureFlag == 1){       //If a secure device
       if (isLocked){
-        if ((cmd != 0xCC) && (cmd != 0x55)){       //0xCC is an SKIP ROM command, 0x55 is an SELECT ROM command
+        if ((cmd != 0xCC) && (cmd != 0x55) && (cmd != 0xF0)){       //0xCC is an SKIP ROM command, 0x55 is an SELECT ROM command
           //errnum = E2B_SECURED_AND_LOCKED;
           //#warning "Attempted communication with locked secured device."
           return false;
@@ -917,13 +916,14 @@ bool E2B::recvAndProcessCmd() {
           return false;
         break;
       case 0x55: // MATCH ROM - Choose/Select ROM
-        recvData(addr, 8);
+        recvData(addr,8);
         if (errnum != ONEWIRE_NO_ERROR)
           return false;
         for (int i=0; i<8; i++)
           if (rom[i] != addr[i])
             return false;
         duty();
+        return true;
       case 0xCC: // SKIP ROM
       	duty();
       	if (errnum != ONEWIRE_NO_ERROR)
@@ -937,15 +937,25 @@ bool E2B::recvAndProcessCmd() {
     }
   }
 
-  if(unlockedState <= 0){  //If you run out of retries
+  /*if(unlockedState <= 0){  //If you run out of retries
     isLocked = 1;
     #warning "Device re-locked."
-  }
+  }*/
 }
 
 bool E2B::duty() {
 	uint8_t done = recv();
   scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
+
+
+  if ((secureFlag == 1) && (isLocked == 1) && (done != 0x3A)){
+    //errnum = E2B_SECURED_AND_LOCKED;
+    //#warning "Attempted communication with locked secured device."
+    Serial.println("You shall not pass!");
+    return false;
+  }/*else{
+    isLocked = 1;
+  }*/
 
   switch (done) {
     case 0xBE: // READ SCREATCHPAD

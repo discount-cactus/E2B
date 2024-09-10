@@ -91,7 +91,7 @@ class E2B{
     bool hostFlag;
     bool secureFlag;
     bool isLocked;
-    uint8_t unlockedState;
+    int unlockedState;
     uint8_t secureKey;
 
     //E2Bslave
