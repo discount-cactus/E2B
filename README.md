@@ -13,6 +13,9 @@ E2B lines require a pull-up resistor - typically 4.7kohm but anywhere between 1k
 ### Off-Board
 For connecting to off-board devices, it is preferable to set the host device type to BUS (or DEFAULT) to ensure error-checking is transmitted. Most MCU's pull up E2B lines with 5V or 3.3V, so the voltage drop can be quite significant as large-gauge wires get longer. Voltage drop can be mitigated with thicker wires, impedance matching, or with additional circuitry to increase the voltage. Verifying all devices are connected to the same voltage supply is important to avoid accidental brown-outs or overvoltaging devices. If this is not possible, consider using level shifters. As with on-board devices, it is important to note that all connected devices be grounded together with solid connections.
 
+### Secure Communication
+E2B features some level of "secure" communication with devices whose secureFlag variables are set to 1. When a device is set to act as a "secure" device, it is assigned an 8-bit key. To communicate with a secured device, you must select it with select() or skip(), followed by the unlock command unlock(KEY) where KEY is the key assigned to the secured device. After unlocking the device, a single command can be sent to the device before the process must be repeated. For more details, please refer to the relevant examples provided.
+
 ### Limitations
 - Because of a given device's ROM address, there can (in theory) be up to 2^64 devices connected to a given E2B line. A good rule of thumb is to keep the device count below 64 at the very most.
 - The data rates, similar to that of the 1-Wire protocol, are around 11.5kbps - making this less than ideal for transmitting long and/or important messages between devices.
