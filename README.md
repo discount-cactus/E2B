@@ -16,7 +16,9 @@ For connecting to off-board devices, it is preferable to set the host device typ
 ### Secure Communication
 E2B features some level of "secure" communication with devices whose secureFlag variables are set to 1. When a device is set to act as a "secure" device, it is assigned an 8-bit key. To communicate with a secured device, you must select it with select() or skip(), followed by the unlock command unlock(KEY) where KEY is the key assigned to the secured device. After unlocking the device, a single command can be sent to the device before the process must be repeated. For more details, please refer to the relevant examples provided.
 
+<p align="center">
 <img width="575" alt="Screenshot 2024-09-10 at 6 38 43 PM" src="https://github.com/user-attachments/assets/7a5153e4-368c-4415-acac-8d9ddadf340e">
+</p>
 
 ### Limitations
 - Because of a given device's ROM address, there can (in theory) be up to 2^64 devices connected to a given E2B line. A good rule of thumb is to keep the device count below 64 at the very most.
