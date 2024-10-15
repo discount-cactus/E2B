@@ -211,9 +211,9 @@ sample code bearing this copyright.
   //It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
   #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
 
-  void E2B::ISRPIN() {
+  /*void E2B::ISRPIN() {
     (*static_E2B_instance).MasterResetPulseDetection();
-  }
+  }*/
 #endif
 
 uint8_t _pin;
@@ -242,6 +242,110 @@ void E2B::setBusType(uint8_t type){
   busType = type;
 }
 
+//Calculates characteristic impedance of a microstrip based on Waddell's equations
+float E2B::getImpedanceMicrostrip(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
+  float  pi = 3.1415;
+  float W_;
+  float Eeff;
+  float Zo;
+  float tWidth = trackWidth;                // in millimeters
+  float tThickness = trackThickness;        // in millimeters
+  float dThickness = dielectricThickness;   // in millimeters
+  float er = er_in;
+
+  Eeff = 1/sqrt(1+((12*dThickness)/tWidth));
+  if ( (tWidth/dThickness) < 1 ){
+    Eeff += 0.04 + pow(1 - (tWidth/dThickness),2);
+  }
+  Eeff *= (er - 1)/2;
+  Eeff += (er + 1)/2;
+
+  W_ = pow(tThickness/dThickness,2);
+  W_ += pow( (1/pi) / ((tWidth/tThickness) + 1.1) ,2);
+  W_ = (4*exp(1)) / W_;
+  W_ = log(W_);
+  W_ *= tThickness/pi;
+  W_ *= (1+pow(er,-1))/2;
+  W_ += tWidth;
+
+  Zo = (14 + (8/er)) / 11;
+  Zo = Zo * ((4*dThickness) / W_);
+  Zo = Zo + sqrt(pow(Zo,2) + (pow(pi,2) * ((1+pow(er,-1))/2) ));
+  Zo *= (4*dThickness) / W_;
+  Zo += 1;
+  Zo = log(Zo);
+  Zo *= 60/sqrt((2*er)+2);
+
+  return Zo;
+}
+
+//Calculates characteristic impedance of a stripline based on Waddell's equations
+float E2B::getImpedanceStripline(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
+  const float  pi = 3.1415;
+  float Weff;
+  float Zo;
+  float tWidth = trackWidth;                // in millimeters
+  float tThickness = trackThickness;        // in millimeters
+  float dThickness = dielectricThickness;   // in millimeters
+  float er = er_in;
+
+  float m = (6 * dThickness) / ((3 * dThickness) + tThickness);
+
+  Weff = pow(tThickness / ((4 * dThickness) + tThickness),2);
+  Weff += pow( (pi * tThickness) / (4 * (tWidth + (1.1 * tThickness) ) ),m);
+  Weff = sqrt(Weff);
+  Weff = er / Weff;
+  Weff = log(Weff);
+  Weff *= tThickness / pi;
+  Weff += tWidth;
+
+  Zo = (16 * dThickness) / (pi * Weff);
+  Zo = Zo + sqrt(pow(Zo,2) + 6.27);
+  Zo *= (8 * dThickness) / (pi * Weff);
+  Zo += 1;
+  Zo = log(Zo);
+  Zo *= 60/sqrt(er);
+
+  return Zo;
+}
+
+//Calculates capacitance of a trace
+/*float E2B::getCapacitanceMicrostrip(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
+  float Co;
+  float tWidth = trackWidth;                // in millimeters
+  float tThickness = trackThickness;        // in millimeters
+  float dThickness = dielectricThickness;   // in millimeters
+  float er = er_in;
+
+  Co = 2.64 * pow(10,-11);
+  Co *= er + 1.41;
+  Co /= log((5.98 * dThickness) / ((0.8*tWidth) + tThickness));
+
+  return Co;
+}
+
+float E2B::getCapacitanceStripline(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
+  float Co;
+  float tWidth = trackWidth;                // in millimeters
+  float tThickness = trackThickness;        // in millimeters
+  float dThickness = dielectricThickness;   // in millimeters
+  float er = er_in;
+
+  Co = 5.55 * pow(10,-11);
+  Co *= er;
+  Co /= log((3.81 * dThickness) / ((0.8*tWidth) + tThickness));
+
+  return Co;
+}
+
+//Calculates characteristic inductance of a trace from its characteristic impedance and getCapacitanceStripline
+// From Zo = sqrt(L/C);
+float E2B::getInductance(float Zo, float Co){
+  float Lo = Co * Zo * Zo;
+
+  return Lo;
+}*/
+
 //Returns the type of the device
 // 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
 uint8_t E2B::getBusType(){
@@ -255,7 +359,7 @@ void E2B::setHostFlag(unsigned char *newAddr, bool level){
   if(level){
     newAddr[0] = FAMILYCODE_HOST;
     newAddr[1] = FAMILYCODE;
-    #warning "Device address changed. newAddr[0] = FAMILYCODE_HOST; newAddr[1] = FAMILYCODE_DEVICE;"
+    //#warning "Device address changed. newAddr[0] = FAMILYCODE_HOST; newAddr[1] = FAMILYCODE_DEVICE;"
   }
 }
 
@@ -276,7 +380,7 @@ void E2B::setSecureFlag(uint8_t level, uint8_t key){
     secureKey = key;
   }else{
     isLocked = 0;
-    #warning "Device secureFlag deactivated."
+    //#warning "Device secureFlag deactivated."
   }
 }
 
@@ -757,7 +861,7 @@ void E2B::MasterResetPulseDetection(){
   }
 }
 
-bool E2B::owsprint() {
+/*bool E2B::owsprint() {
 	//waitForRequestInterrupt(false);
 	//Serial.println("done");
   delayMicroseconds(25);
@@ -784,7 +888,7 @@ bool E2B::owsprint() {
 
 	//while (recvAndProcessCmd()) {};
 	recvAndProcessCmd();
-}
+}*/
 
 void E2B::init(unsigned char rom[8]) {
 	for (int i=0; i<7; i++)
@@ -951,7 +1055,7 @@ bool E2B::duty() {
   if ((secureFlag == 1) && (isLocked == 1) && (done != 0x3A)){
     //errnum = E2B_SECURED_AND_LOCKED;
     //#warning "Attempted communication with locked secured device."
-    Serial.println("You shall not pass!");
+    //Serial.println("You shall not pass!");
     return false;
   }/*else{
     isLocked = 1;
@@ -969,16 +1073,18 @@ bool E2B::duty() {
 				return false;
 			break;
     case 0x3A: // UNLOCK REQUEST
-      uint8_t receivedKey = recv();
-      if(receivedKey == secureKey){ //Unlocks the device if receivedKey matches the key of the secured device (unlocked for thr commands)
-        isLocked = 0;
-        unlockedState = 3;    //Processes 3 commands before locking again
-        //#warning "Secured device unlocked for 3 commands."
-      }
-			if (errnum != ONEWIRE_NO_ERROR)
-				return false;
-			break;
-		case 0x44: // CONVERT SENSOR
+      {
+        uint8_t receivedKey = recv();
+        if(receivedKey == secureKey){ //Unlocks the device if receivedKey matches the key of the secured device (unlocked for thr commands)
+          isLocked = 0;
+          unlockedState = 3;    //Processes 3 commands before locking again
+          //#warning "Secured device unlocked for 3 commands."
+        }
+  			if (errnum != ONEWIRE_NO_ERROR)
+  				return false;
+			}
+      break;
+		/*case 0x44: // CONVERT SENSOR
 			userFunc[0x44];                       //originally user44hFunc();
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
@@ -992,7 +1098,7 @@ bool E2B::duty() {
 			userFunc[0xB8];                       //originally userB8hFunc();
 			if (errnum != ONEWIRE_NO_ERROR)
 				return false;
-			break;
+			break;*/
 		/*case 0x4E: // WRITE SCREATCHPAD
 			recvData(temp_scratchpad, 3);
 			setScratchpad_external(temp_scratchpad);
@@ -1089,9 +1195,9 @@ bool E2B::waitReset(uint16_t timeout_ms) {
   //Master wait is 65, so we have 35 more to send our presence now that reset is done
   return true;
 }
-bool E2B::waitReset() {
+/*bool E2B::waitReset() {
   return waitReset(1000);
-}
+}*/
 
 bool E2B::presence(uint8_t delta) {
   IO_REG_TYPE mask = bitmask;

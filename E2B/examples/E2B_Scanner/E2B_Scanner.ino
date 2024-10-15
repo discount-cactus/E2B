@@ -85,6 +85,12 @@ int pinScan(int pin){
       case 0x29:
         Serial.print("\t\tDS2408");
         break;
+      case 0x3A:
+        Serial.print("\t\tDS2413");
+        break;
+      case 0x43:
+        Serial.print("\t\tDS28EC20");
+        break;
       case 0x56:
         Serial.print("\t\tDS28E18");
         break;
@@ -102,6 +108,9 @@ int pinScan(int pin){
         break;
       case 0xA9:
         Serial.print("\t\tSAMD21");
+        break;
+      case 0xB1:
+        Serial.print("\t\tLGT8F");
         break;
     }
     

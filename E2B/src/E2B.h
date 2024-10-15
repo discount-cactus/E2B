@@ -107,6 +107,13 @@ class E2B{
     E2B() { }
     E2B(uint8_t pin) { begin(pin); }
     void begin(uint8_t pin);
+
+    float getImpedanceMicrostrip(float trackWidth, float trackThickness = 0.035, float dielectricThickness = 1.51, float er_in = 4.2);
+    float getImpedanceStripline(float trackWidth, float trackThickness = 0.035, float dielectricThickness = 1.24, float er_in = 4.2);
+    //float getCapacitanceMicrostrip(float trackWidth, float trackThickness, float dielectricThickness, float er_in = 4.2);
+    //float getCapacitanceStripline(float trackWidth, float trackThickness, float dielectricThickness, float er_in = 4.2);
+    //float getInductance(float Zo, float Co);
+
     void setBusType(uint8_t type);
     uint8_t getBusType();
     void setHostFlag(unsigned char *newAddr, bool level);
@@ -142,8 +149,8 @@ class E2B{
       bool waitForRequest(bool ignore_errors);
       bool waitForRequestInterrupt(bool ignore_errors);
       bool waitReset(uint16_t timeout_ms);
-      bool waitReset();
-      bool owsprint();
+      //bool waitReset();
+      //bool owsprint();
       bool presence(uint8_t delta);
       bool presence();
       bool searchROM();
@@ -175,9 +182,9 @@ class E2B{
     #endif
 };
 
-#if E2B_ASYNC_RECV
+/*#if E2B_ASYNC_RECV
   static E2B* static_E2B_instance;
-#endif
+#endif*/
 
 // Prevent this name from leaking into Arduino sketches
 #ifdef IO_REG_TYPE
