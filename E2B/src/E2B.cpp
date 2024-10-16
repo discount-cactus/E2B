@@ -960,6 +960,7 @@ bool E2B::waitForRequest(bool ignore_errors) {
   }
 }
 
+//Interrupt-driven variant of waitForRequest()
 bool E2B::waitForRequestInterrupt(bool ignore_errors) {
   errnum = ONEWIRE_NO_ERROR;
   //owsprint();

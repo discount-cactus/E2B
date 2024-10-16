@@ -143,7 +143,7 @@ class E2B{
       //E2B(uint8_t pin);
       void init(unsigned char rom[8]);
       void MasterResetPulseDetection();
-      static void ISRPIN();
+      //static void ISRPIN();
       void setScratchpad(unsigned char scratchpad[9]);
       void setPower(uint8_t power);
       bool waitForRequest(bool ignore_errors);
