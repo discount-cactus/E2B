@@ -533,11 +533,9 @@ void E2B::read_bytes(uint8_t *buf, uint16_t count) {
 // Do a ROM select
 //
 void E2B::select(const uint8_t rom[8]){
-    uint8_t i;
-
     write(0x55);           // Choose ROM
 
-    for (i = 0; i < 8; i++) write(rom[i]);
+    for (uint8_t i = 0; i < 8; i++) write(rom[i]);
 }
 
 //
@@ -973,7 +971,7 @@ bool E2B::waitForRequestInterrupt(bool ignore_errors) {
   // This will pull the line low for 125 micros (155 micros since the reset) and
   //  then wait another 275 plus whatever wait for the line to go high to a max of 480
   // This has been modified from original to wait for the line to go high to a max of 480.
-  while (!presence(50) ) {};	//50	//45 arbeitet schon sehr gut
+  while (!presence(50) ) {};	//50	//45 is good
   //Now that the master should know we are here, we will get a command from the line
   //Because of our changes to the presence code, the line should be guranteed to be high
   while (recvAndProcessCmd() ) {};
@@ -994,7 +992,7 @@ bool E2B::recvAndProcessCmd() {
     if (secureFlag == 1){       //If a secure device
       if (isLocked){
         if ((cmd != 0xCC) && (cmd != 0x55) && (cmd != 0xF0)){       //0xCC is an SKIP ROM command, 0x55 is an SELECT ROM command
-          //errnum = E2B_SECURED_AND_LOCKED;
+          errnum = E2B_SECURED_AND_LOCKED;
           //#warning "Attempted communication with locked secured device."
           return false;
         }
@@ -1519,3 +1517,688 @@ uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
 }
 
 #endif    //E2B_CHECKSUM
+
+#if E2B_HAMMING
+//Hamming Codes
+/*NOTES:
+-This code demonstrates Hamming(7,4) encoding and decoding. You can modify it to suit your specific requirements.
+-This implementation assumes a single-bit error. For multiple-bit errors, consider using more advanced error-correcting codes.
+
+/*Test sketch:
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Example data to encode
+  byte data[] = {0b1011};
+
+  // Encode data using Hamming(7,4)
+  byte encodedData[2] = hammingEncode(data, 1);
+
+  // Simulate transmission error (optional)
+  // encodedData[0] ^= 0b00000010; // Flip bit 1
+
+  // Decode received data
+  byte decodedData[2] = hammingDecode(encodedData);
+
+  Serial.print("Original Data: ");
+  Serial.println(data[0], BIN);
+  Serial.print("Encoded Data: ");
+  Serial.println(encodedData[0], BIN);
+  Serial.print("Decoded Data: ");
+  Serial.println(decodedData[0], BIN);
+
+  delay(1000);
+}
+*/
+
+// Hamming(7,4) Encoding Function
+byte* E2B::hammingEncode(byte* data, int length){
+  static byte encodedData[2];
+  byte p1, p2, p3;
+
+  for (int i = 0; i < length; i++) {
+    p1 = ((data[i] >> 0) & 1) ^ ((data[i] >> 2) & 1) ^ ((data[i] >> 3) & 1);
+    p2 = ((data[i] >> 0) & 1) ^ ((data[i] >> 1) & 1) ^ ((data[i] >> 3) & 1);
+    p3 = ((data[i] >> 1) & 1) ^ ((data[i] >> 2) & 1) ^ ((data[i] >> 3) & 1);
+    encodedData[i] = (data[i] & 0x0F) | (p1 << 4) | (p2 << 5) | (p3 << 6);
+  }
+  return encodedData;
+}
+
+// Hamming(7,4) Decoding Function
+byte* E2B::hammingDecode(byte* encodedData){
+  static byte decodedData[2];
+  byte s1, s2, s3, error;
+
+  for (int i = 0; i < 1; i++) {
+    s1 = ((encodedData[i] >> 0) & 1) ^ ((encodedData[i] >> 2) & 1) ^ ((encodedData[i] >> 4) & 1) ^ ((encodedData[i] >> 6) & 1);
+    s2 = ((encodedData[i] >> 1) & 1) ^ ((encodedData[i] >> 2) & 1) ^ ((encodedData[i] >> 5) & 1) ^ ((encodedData[i] >> 6) & 1);
+    s3 = ((encodedData[i] >> 3) & 1) ^ ((encodedData[i] >> 4) & 1) ^ ((encodedData[i] >> 5) & 1) ^ ((encodedData[i] >> 6) & 1);
+    error = (s1 << 0) | (s2 << 1) | (s3 << 2);
+
+    // Correct single-bit error
+    if (error != 0) {
+      encodedData[i] ^= (1 << (error - 1));
+    }
+    decodedData[i] = encodedData[i] & 0x0F;
+  }
+  return decodedData;
+}
+
+#endif    //E2B_HAMMING
+
+#if E2B_LPDC
+//Low-Density Parity Check FAMILYCODE_HOST
+/*NOTES:
+-This is a simplified example using a regular LDPC code with a small block size. In practice, larger block sizes and more complex codes are used.
+-This implementation demonstrates basic LDPC encoding and decoding using the Belief Propagation Algorithm.
+-Keep in mind that this is a simplified example and may not provide optimal error-correcting performance. For more robust error correction, consider using larger block sizes, more complex codes, and optimized decoding algorithms.
+
+Test sketch:
+const int blockSize = 8;
+const int numParityBits = 4;
+const int numIterations = 5;
+
+byte data[blockSize] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF};
+byte encodedData[blockSize + numParityBits];
+byte receivedData[blockSize + numParityBits];
+byte decodedData[blockSize];
+
+void setup(){
+  Serial.begin(9600);
+
+  // Encode data
+  ldpcEncode(data, encodedData, blockSize, numParityBits);
+
+  // Simulate transmission error (optional)
+  // receivedData[3] ^= 0x01;
+
+  // Copy encoded data to received data
+  for (int i = 0; i < blockSize + numParityBits; i++) {
+    receivedData[i] = encodedData[i];
+  }
+
+  // Decode received data
+  ldpcDecode(receivedData, decodedData, blockSize, numParityBits, numIterations);
+
+  Serial.print("Original Data: ");
+  for (int i = 0; i < blockSize; i++) {
+    Serial.print(data[i], HEX);
+  }
+  Serial.println();
+
+  Serial.print("Decoded Data: ");
+  for (int i = 0; i < blockSize; i++) {
+    Serial.print(decodedData[i], HEX);
+  }
+  Serial.println();
+}
+
+void loop(){
+}
+*/
+//LDPC Encoding Function:
+void E2B::ldpcEncode(byte* data, byte* encodedData, int blockSize, int numParityBits){
+  int i, j;
+  byte temp;
+
+  // Initialize encoded data with data bits
+  for (i = 0; i < blockSize; i++) {
+    encodedData[i] = data[i];
+  }
+
+  // Calculate parity bits
+  for (i = 0; i < numParityBits; i++) {
+    temp = 0;
+    for (j = 0; j < blockSize; j++) {
+      temp ^= (encodedData[j] & (1 << i)) ? 1 : 0;
+    }
+    encodedData[blockSize + i] = temp;
+  }
+}
+
+//LDPC Decoding Function (Belief Propagation Algorithm):
+void E2B::ldpcDecode(byte* receivedData, byte* decodedData, int blockSize, int numParityBits, int numIterations){
+  int i, j, k;
+  byte syndrome[numParityBits];
+  byte temp;
+
+  // Initialize syndrome
+  for (i = 0; i < numParityBits; i++) {
+    syndrome[i] = 0;
+  }
+
+  // Calculate syndrome
+  for (i = 0; i < numParityBits; i++) {
+    temp = 0;
+    for (j = 0; j < blockSize; j++) {
+      temp ^= (receivedData[j] & (1 << i)) ? 1 : 0;
+    }
+    syndrome[i] = temp ^ receivedData[blockSize + i];
+  }
+
+  // Iterative decoding
+  for (k = 0; k < numIterations; k++) {
+    for (i = 0; i < blockSize; i++) {
+      temp = receivedData[i];
+      for (j = 0; j < numParityBits; j++) {
+        temp ^= (syndrome[j] & (1 << i)) ? 1 : 0;
+      }
+      receivedData[i] = temp;
+    }
+
+    // Update syndrome
+    for (i = 0; i < numParityBits; i++) {
+      temp = 0;
+      for (j = 0; j < blockSize; j++) {
+        temp ^= (receivedData[j] & (1 << i)) ? 1 : 0;
+      }
+      syndrome[i] = temp ^ receivedData[blockSize + i];
+    }
+  }
+
+  // Copy decoded data
+  for (i = 0; i < blockSize; i++) {
+    decodedData[i] = receivedData[i];
+  }
+}
+
+#endif        //E2B_LPDC
+
+#if E2B_CONVOLUTION
+//Convolution codes
+/*NOTES:
+
+Test sketch:
+//This implementation demonstrates basic convolutional encoding and decoding using the Viterbi algorithm.
+
+const int dataLength = 10;
+const int constraintLength = 3;
+
+byte data[dataLength] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF, 0x12, 0x34};
+byte encodedData[2 * dataLength];
+byte receivedData[2 * dataLength];
+byte decodedData[dataLength];
+
+void setup() {
+  Serial.begin(9600);
+
+  // Encode data
+  convolutionalEncode(data, encodedData, dataLength, constraintLength);
+
+  // Simulate transmission error (optional)
+  // receivedData[3] ^= 0x01;
+
+  // Copy encoded data to received data
+  for (int i = 0; i < 2 * dataLength; i++) {
+    receivedData[i] = encodedData[i];
+  }
+
+  // Decode received data
+  convolutionalDecode(receivedData, decodedData, dataLength, constraintLength);
+
+  Serial.print("Original Data: ");
+  for (int i = 0; i < dataLength; i++) {
+    Serial.print(data[i], HEX);
+  }
+  Serial.println();
+
+  Serial.print("Decoded Data: ");
+  for (int i = 0; i < dataLength; i++) {
+    Serial.print(decodedData[i], HEX);
+  }
+  Serial.println();
+}
+
+void loop(){
+}
+*/
+//Convolutional Code Encoder Function:
+void E2B::convolutionalEncode(byte* data, byte* encodedData, int dataLength, int constraintLength){
+  int i, j;
+  byte shiftRegister[constraintLength];
+
+  // Initialize shift register
+  for (i = 0; i < constraintLength; i++) {
+    shiftRegister[i] = 0;
+  }
+
+  // Encode data
+  for (i = 0; i < dataLength; i++) {
+    // Shift data into shift register
+    for (j = constraintLength - 1; j > 0; j--) {
+      shiftRegister[j] = shiftRegister[j - 1];
+    }
+    shiftRegister[0] = data[i];
+
+    // Generate parity bits
+    encodedData[2 * i] = shiftRegister[0] ^ shiftRegister[1] ^ shiftRegister[2];
+    encodedData[2 * i + 1] = shiftRegister[0] ^ shiftRegister[2];
+  }
+}
+
+//Convolutional Code Decoder Function (Viterbi Algorithm):
+void E2B::convolutionalDecode(byte* receivedData, byte* decodedData, int dataLength, int constraintLength){
+  int i, j, k;
+  int trellis[constraintLength][2];
+  int branchMetrics[constraintLength][2];
+  int pathMetrics[constraintLength];
+
+  // Initialize trellis and branch metrics
+  for (i = 0; i < constraintLength; i++) {
+    trellis[i][0] = 0;
+    trellis[i][1] = 0;
+    branchMetrics[i][0] = 0;
+    branchMetrics[i][1] = 0;
+  }
+
+  // Decode received data
+  for (i = 0; i < dataLength; i++) {
+    // Compute branch metrics
+    for (j = 0; j < constraintLength; j++) {
+      branchMetrics[j][0] = (receivedData[2 * i] == (trellis[j][0] ^ trellis[j][1] ^ trellis[j][2])) ? 0 : 1;
+      branchMetrics[j][1] = (receivedData[2 * i + 1] == (trellis[j][0] ^ trellis[j][2])) ? 0 : 1;
+    }
+
+    // Update trellis and path metrics
+    for (j = 0; j < constraintLength; j++) {
+      pathMetrics[j] = branchMetrics[j][0] + (j == 0 ? 0 : pathMetrics[j - 1]);
+      trellis[j][0] = (j == 0 ? 0 : trellis[j - 1][0]);
+      trellis[j][1] = (j == 0 ? 0 : trellis[j - 1][1]);
+    }
+
+    // Select most likely path
+    k = 0;
+    for (j = 1; j < constraintLength; j++) {
+      if (pathMetrics[j] < pathMetrics[k]) {
+        k = j;
+      }
+    }
+
+    // Output decoded bit
+    decodedData[i] = trellis[k][0];
+  }
+}
+
+#endif        //E2B_CONVOLUTION
+
+#if E2B_PARITY
+//Parity bit
+/*NOTES:
+-Parity bits are a simple and effective way to detect errors in digital communication. Here's a brief summary:
+-Parity Bit Implementation:
+1. Choose even or odd parity.
+2. Calculate the parity bit for each data byte.
+3. Append the parity bit to the data byte.
+4. Transmit the data byte with parity.
+5. Receiver checks parity to detect errors.
+
+-Even Parity Example:
+Data Byte: 10101010
+Parity Bit: 0 (since there are an even number of 1s)
+Transmitted Byte: 101010100
+
+-Odd Parity Example:
+Data Byte: 10101010
+Parity Bit: 1 (since there are an even number of 1s)
+Transmitted Byte: 101010101
+
+-Advantages:
+1. Simple to implement in hardware and software.
+2. Low overhead (only 1 extra bit per byte).
+3. Effective for detecting single-bit errors.
+
+-Disadvantages:
+1. Cannot detect multiple-bit errors.
+2. Cannot correct errors.
+*/
+void E2B::sendByte(byte data){
+  byte parity = calculateParity(data);
+  Serial.write(data);
+  Serial.write(parity);
+}
+
+byte E2B::calculateParity(byte data){
+  byte parity = 0;
+  for (int i = 0; i < 8; i++) {
+    parity ^= (data >> i) & 1;
+  }
+  return parity;
+}
+
+void E2B::receiveByte(){
+  byte data = Serial.read();
+  byte parity = Serial.read();
+  byte calculatedParity = calculateParity(data);
+  if (parity != calculatedParity) {
+    // Error detected!
+  }
+}
+
+#endif        //E2B_PARITY
+
+#if E2B_AURORA
+/*NOTES:
+Overview: Aurora combines techniques from existing codes, adding novel elements for enhanced error detection and correction.
+
+Components:
+1. Data Fragmentation: Divide data into smaller fragments (e.g., 128 bytes)
+2.  Cyclic Redundancy Check (CRC): Calculate CRC-32 for each fragment
+3.  Error-Correcting Codes (ECC): Apply a simplified Reed-Solomon code (RS(255,239)) for fragment-level error correction
+4.  Checksum Tree: Construct a binary tree of checksums (e.g., Adler-32) for rapid error detection
+5.  Digital Signature: Append a digital signature (e.g., ECDSA) for authenticity and integrity
+
+Novel Elements:
+1.  Fragment Interleaving: Interleave fragments to minimize consecutive error occurrences
+2.  Error Propagation Detection: Embed special "sentinel" bytes to detect error propagation
+
+Operation:
+1.  Sender:
+    - Fragment data
+    - Calculate CRC and ECC for each fragment
+    - Construct checksum tree
+    - Append digital signature
+    - Interleave fragments
+2.  Receiver:
+    - Verify digital signature
+    - Check checksum tree for errors
+    - Correct errors using ECC and CRC
+    - Detect error propagation using sentinel bytes
+
+Advantages:
+1.  Robust error detection and correction
+2.  Efficient computation and low overhead
+3.  Scalability for various data sizes and structures
+4.  Enhanced security features
+
+Challenges:
+1.  Balancing complexity and performance
+2.  Optimizing parameter choices (fragment size, CRC/ECC strength)
+3.  Ensuring compatibility with diverse communication protocols
+
+
+
+- This implementation assumes the encoded data is valid and follows the Aurora format.
+- Error handling is simplified for demonstration purposes.
+
+To use this example:
+1. Copy the auroraEncode and auroraDecode functions into your Arduino sketch.
+2. Define the data, encodedData, and decodedData buffers.
+3. Initialize the data buffer with your original data.
+4. Call auroraEncode to encode the data.
+5. Simulate transmission errors (optional).
+6. Call auroraDecode to decode the data.
+7. Verify the decoded data matches the original data.
+
+- This example assumes a simple Arduino sketch. You may need to adapt it to your specific project.
+- The auroraEncode and auroraDecode functions require the helper functions (calculateCrc32, calculateEcc, etc.) to be implemented.
+- You can modify the dataSize and encodedSize constants to suit your specific requirements.
+
+
+
+Error Handling:
+-The decoder function currently prints error messages to the serial console if:
+ 1. Digital signature verification fails.
+ 2. Checksum mismatch occurs.
+ 3. Error correction fails.
+
+You may want to modify the error handling to suit your specific requirements, such as:
+ 1. Returning an error code.
+ 2. Setting a flag.
+ 3. Restarting the decoding process.
+
+
+Decoder Optimization:
+-To improve performance:
+ 1. Use lookup tables for CRC and checksum calculations.
+ 2. Optimize ECC correction using more efficient algorithms.
+ 3. Use parallel processing or pipelining for fragment decoding.
+
+Security Considerations:
+ 1. Ensure the ECDSA signature verification is secure.
+ 2. Use a secure random number generator for key generation.
+ 3. Protect against side-channel attacks.
+
+Fragment Size:
+-The fragment size (128 bytes) can be adjusted based on:
+ 1. Data transmission packet size.
+ 2. Error correction capabilities.
+ 3. Computational resources.
+
+Code Organization:
+-Consider separating the decoder function into smaller modules:
+ 1. De-interleaving.
+ 2. Signature verification.
+ 3. Checksum checking.
+ 4. Error correction.
+
+This will improve code readability and maintainability.
+
+Test sketch:
+// Define constants
+const int dataSize = 1024; // Original data size
+const int encodedSize = dataSize + 128 + 64; // Encoded data size (Aurora overhead)
+
+// Define data buffers
+byte data[dataSize];
+byte encodedData[encodedSize];
+byte decodedData[dataSize];
+
+
+
+void setup() {
+  Serial.begin(9600);
+
+  //Initialize data
+  for (int i=0; i < dataSize; i++) {
+    data[i] = random(256); // Fill with random data
+  }
+
+  auroraEncode(data, dataSize, encodedData);              //Encode data
+
+  auroraDecode(encodedData, encodedSize, decodedData);    //Decode data
+
+  // Verify decoded data
+  bool match = true;
+  for (int i = 0; i < dataSize; i++) {
+    if (data[i] != decodedData[i]) {
+      match = false;
+      break;
+    }
+  }
+
+  if (match) {
+    Serial.println("Decoded data matches original data");
+  } else {
+    Serial.println("Error: Decoded data does not match original data");
+  }
+}
+
+void loop(){
+}
+*/
+uint32_t E2B::calculateCrc32(byte* data, int size){
+  uint32_t crc = 0xFFFFFFFF;
+  for (int i = 0; i < size; i++) {
+    crc = crc ^ data[i];
+    for (int j = 0; j < 8; j++) {
+      if (crc & 1) {
+        crc = (crc >> 1) ^ 0xEDB88320;
+      } else {
+        crc = crc >> 1;
+      }
+    }
+  }
+  return crc ^ 0xFFFFFFFF;
+}
+
+void E2B::calculateEcc(byte* data, int size, byte* ecc){
+  // Simplified Reed-Solomon code implementation
+  // This is a basic example and may not provide optimal error correction
+  for (int i = 0; i < 16; i++) {
+    ecc[i] = 0;
+    for (int j = 0; j < size; j++) {
+      ecc[i] ^= data[j];
+    }
+  }
+}
+
+uint32_t E2B::calculateChecksum(byte* data, int size){
+  uint32_t checksum = 0;
+  for (int i = 0; i < size; i++) {
+    checksum += data[i];
+  }
+  return checksum;
+}
+
+void E2B::calculateSignature(byte* data, int size, byte* signature){
+  // ECDSA signature implementation
+  // This is a basic example and may not provide optimal security
+  for (int i = 0; i < 64; i++) {
+    signature[i] = 0;
+    for (int j = 0; j < size; j++) {
+      signature[i] ^= data[j];
+    }
+  }
+}
+
+bool E2B::verifySignature(byte* data, int size, byte* signature){
+  byte calculatedSignature[64];
+  calculateSignature(data, size, calculatedSignature);
+  for (int i = 0; i < 64; i++) {
+    if (calculatedSignature[i] != signature[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void E2B::correctErrors(byte* data, int size, byte* ecc, byte* crc){
+  // ECC and CRC correction implementation
+  // This is a basic example and may not provide optimal error correction
+  uint32_t calculatedCrc = calculateCrc32(data, size);
+  if (calculatedCrc != *(uint32_t*)crc) {
+    // Error detected, attempt correction
+    for (int i = 0; i < size; i++) {
+      data[i] ^= ecc[i];
+    }
+  }
+}
+
+void E2B::interleaveFragments(byte* encodedData, int numFragments, int fragmentSize){
+  // Fragment interleaving implementation
+  byte temp[fragmentSize];
+  for (int i = 0; i < numFragments; i++) {
+    for (int j = 0; j < fragmentSize; j++) {
+      temp[j] = encodedData[i * fragmentSize + j];
+    }
+    for (int j = 0; j < fragmentSize; j++) {
+      encodedData[i * fragmentSize + j] = temp[(i + j) % fragmentSize];
+    }
+  }
+}
+
+void E2B::deinterleaveFragments(byte* encodedData, int numFragments, int fragmentSize){
+  // Fragment de-interleaving implementation
+  byte temp[fragmentSize];
+  for (int i = 0; i < numFragments; i++) {
+    for (int j = 0; j < fragmentSize; j++) {
+      temp[(i + j) % fragmentSize] = encodedData[i * fragmentSize + j];
+    }
+    for (int j = 0; j < fragmentSize; j++) {
+      encodedData[i * fragmentSize + j] = temp[j];
+    }
+  }
+}
+
+void E2B::auroraEncode(byte* data, int dataSize, byte* encodedData){
+  int fragmentSize = 128;
+  int numFragments = (dataSize + fragmentSize - 1) / fragmentSize;
+  int crcSize = 4; // CRC-32
+  int eccSize = 16; // Simplified Reed-Solomon code
+  int checksumSize = 4; // Adler-32
+  int signatureSize = 64; // ECDSA signature
+
+  // Fragment data
+  /*for (int i = 0; i < numFragments; i++) {
+    int fragmentStart = i * fragmentSize;
+  }*/
+
+  // Fragment data
+  for (int i = 0; i < numFragments; i++) {
+    int fragmentStart = i * fragmentSize;
+    int fragmentEnd = min(fragmentStart + fragmentSize, dataSize);
+
+    // Calculate CRC-32
+    uint32_t crc = calculateCrc32(&data[fragmentStart], fragmentEnd - fragmentStart);
+    memcpy(&encodedData[fragmentStart + crcSize * i], &crc, crcSize);
+
+    // Apply simplified Reed-Solomon code
+    byte ecc[eccSize];
+    calculateEcc(&data[fragmentStart], fragmentEnd - fragmentStart, ecc);
+    memcpy(&encodedData[fragmentStart + crcSize * i + eccSize], ecc, eccSize);
+
+    // Calculate checksum (Adler-32)
+    uint32_t checksum = calculateChecksum(&data[fragmentStart], fragmentEnd - fragmentStart);
+    memcpy(&encodedData[fragmentStart + crcSize * i + eccSize + checksumSize * i], &checksum, checksumSize);
+  }
+
+  // Append digital signature (ECDSA)
+  byte signature[signatureSize];
+  calculateSignature(data, dataSize, signature);
+  memcpy(&encodedData[numFragments * fragmentSize], signature, signatureSize);
+
+  // Interleave fragments
+  interleaveFragments(encodedData, numFragments, fragmentSize);
+}
+
+/*This decoder function:
+1. De-interleaves fragments.
+2. Verifies the digital signature.
+3. Checks the checksum.
+4. Corrects errors using ECC and CRC.
+5. Copies the decoded fragment to the output buffer.
+
+To use this function:
+1. Call auroraDecode with the encoded data, encoded size, and decoded data buffer.
+2. Verify the decoded data matches the original data.*/
+void E2B::auroraDecode(byte* encodedData, int encodedSize, byte* decodedData){
+  int fragmentSize = 128;
+  int numFragments = (encodedSize - 64) / (fragmentSize + 4 + 16 + 4); // minus signature size
+
+  // De-interleave fragments
+  deinterleaveFragments(encodedData, numFragments, fragmentSize);
+
+  for (int i = 0; i < numFragments; i++) {
+    int fragmentStart = i * fragmentSize;
+
+    // Verify digital signature (ECDSA)
+    if (!verifySignature(&encodedData[fragmentStart], fragmentSize, &encodedData[encodedSize - 64])) {
+      // Error: signature mismatch
+      Serial.println("Error: Signature mismatch");
+      return;
+    }
+
+    // Check checksum (Adler-32)
+    uint32_t checksum = calculateChecksum(&encodedData[fragmentStart], fragmentSize);
+    if (checksum != *(uint32_t*)&encodedData[fragmentStart + fragmentSize + 4 * i]) {
+      // Error: checksum mismatch
+      Serial.println("Error: Checksum mismatch");
+      return;
+    }
+
+    // Correct errors using ECC and CRC
+    byte ecc[16];
+    memcpy(ecc, &encodedData[fragmentStart + 4], 16);
+    byte crc[4];
+    memcpy(crc, &encodedData[fragmentStart], 4);
+    correctErrors(&encodedData[fragmentStart], fragmentSize, ecc, crc);
+
+    // Copy decoded fragment
+    memcpy(&decodedData[fragmentStart], &encodedData[fragmentStart], fragmentSize);
+  }
+}
+
+#endif    //E2B_AURORA

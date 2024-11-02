@@ -11,13 +11,17 @@ E2B e2b(E2B_pin);  // on pin 2 (a 4.7K resistor is necessary)
 
 void IRAM_ATTR respond(){
   e2b.MasterResetPulseDetection();
+  //Serial.println("Pulse detected.");
 }
 
 void setup() {
   attachInterrupt(E2B_pin,respond,CHANGE);
   Serial.begin(9600);
-  while(!Serial);
+  while(!Serial){}
   Serial.println("E2B Slave Node Test.");
+  for (;;){
+    Serial.println("Test.");
+  }
   //randomSeed(analogRead(0));          //Uncomment when generating new rom address
   //e2b.generateROM(rom);               //Uncomment when generating new rom address
   e2b.init(rom);
@@ -31,6 +35,6 @@ void setup() {
 }*/
 
 void loop(void) {
-  e2b.waitForRequest(false);
-  Serial.println(e2b.getScratchpad(4),HEX);
+  //e2b.waitForRequest(false);
+  //Serial.println(e2b.getScratchpad(4),HEX);
 }

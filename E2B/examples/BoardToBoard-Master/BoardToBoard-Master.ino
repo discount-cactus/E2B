@@ -1,4 +1,7 @@
 //Board-to-Board example - Master node
+/*NOTES:
+For ESP32-S3, sketch works on ESP32 core v2.0.17
+*/
 #include <E2B.h>
 
 #define E2B_pin 2

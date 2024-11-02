@@ -41,7 +41,32 @@
 #define E2B_CHECKSUM 0
 #endif
 
-#if defined(__SAM3X8E__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__PIC32MX__)
+// you can exclude E2B Hamming Codes by defining this to 0, defaulted to 0
+#ifndef E2B_HAMMING
+#define E2B_HAMMING 0
+#endif
+
+// you can exclude E2B Low-Density Parity Checks (LPDC) by defining this to 0, defaulted to 0
+#ifndef E2B_LPDC
+#define E2B_LPDC 0
+#endif
+
+// you can exclude E2B Convolution Codes by defining this to 0, defaulted to 0
+#if E2B_CONVOLUTION
+#define E2B_CONVOLUTION 0
+#endif
+
+// you can exclude E2B Parity bits by defining this to 0, defaulted to 0
+#if E2B_PARITY
+#define E2B_PARITY 0
+#endif
+
+// you can exclude E2B Aurora encoding/decoding by defining this to 0, defaulted to 0
+#ifndef E2B_AURORA
+#define E2B_AURORA 0
+#endif
+
+#if defined(__SAM3X8E__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__PIC32MX__) /* || defined(__IMXRT1052__) || defined(__IMXRT1062__)*/
 #define lowmark   325
 #define highmark  500
 //#elif defined(__AVR__)
@@ -179,6 +204,35 @@ class E2B{
     #endif
     #if E2B_CHECKSUM
       static uint8_t checksum(const uint8_t *addr, uint8_t len);
+    #endif
+    #if E2B_HAMMING
+      byte* hammingEncode(byte* data, int length);
+      byte* hammingDecode(byte* encodedData);
+    #endif
+    #if E2B_LPDC
+      void ldpcEncode(byte* data, byte* encodedData, int blockSize, int numParityBits);
+      void ldpcDecode(byte* receivedData, byte* decodedData, int blockSize, int numParityBits, int numIterations);
+    #endif
+    #if E2B_CONVOLUTION
+      void convolutionalEncode(byte* data, byte* encodedData, int dataLength, int constraintLength);
+      void convolutionalDecode(byte* receivedData, byte* decodedData, int dataLength, int constraintLength);
+    #endif
+    #if E2B_PARITY
+      void sendByte(byte data);
+      byte calculateParity(byte data);
+      void receiveByte();
+    #endif
+    #if E2B_AURORA
+      uint32_t calculateCrc32(byte* data, int size)
+      void calculateEcc(byte* data, int size, byte* ecc)
+      uint32_t calculateChecksum(byte* data, int size)
+      void calculateSignature(byte* data, int size, byte* signature)
+      bool verifySignature(byte* data, int size, byte* signature)
+      void correctErrors(byte* data, int size, byte* ecc, byte* crc)
+      void interleaveFragments(byte* encodedData, int numFragments, int fragmentSize)
+      void deinterleaveFragments(byte* encodedData, int numFragments, int fragmentSize)
+      void auroraEncode(byte* data, int dataSize, byte* encodedData);
+      void auroraDecode(byte* encodedData, int encodedSize, byte* decodedData);
     #endif
 };
 
