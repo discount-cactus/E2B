@@ -18,11 +18,14 @@
 #include "pins_arduino.h"  // for digitalPinToBitMask, etc
 #endif
 
+// Config file for the library
+#include "E2B_config.h"
+
 // Board-specific macros for direct GPIO
 #include "util/E2B_direct_regtype.h"
 
 // you can exclude asynchronous E2B receiving by defining this to 0
-#ifndef E2B_ASYNC_RECV
+/*#ifndef E2B_ASYNC_RECV
 #define E2B_ASYNC_RECV 1
 #endif
 
@@ -64,7 +67,7 @@
 // you can exclude E2B Aurora encoding/decoding by defining this to 0, defaulted to 0
 #ifndef E2B_AURORA
 #define E2B_AURORA 0
-#endif
+#endif*/
 
 #if defined(__SAM3X8E__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__PIC32MX__) /* || defined(__IMXRT1052__) || defined(__IMXRT1062__)*/
 #define lowmark   325

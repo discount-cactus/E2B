@@ -855,6 +855,7 @@ void E2B::MasterResetPulseDetection(){
   previous = micros();
   diff = previous - old_previous;
   if (diff >= lowmark && diff <= highmark) {
+    Serial.println("Dawg0");
     waitForRequestInterrupt(false);
   }
 }
@@ -972,6 +973,7 @@ bool E2B::waitForRequestInterrupt(bool ignore_errors) {
   //  then wait another 275 plus whatever wait for the line to go high to a max of 480
   // This has been modified from original to wait for the line to go high to a max of 480.
   while (!presence(50) ) {};	//50	//45 is good
+  Serial.println("Dawg2");
   //Now that the master should know we are here, we will get a command from the line
   //Because of our changes to the presence code, the line should be guranteed to be high
   while (recvAndProcessCmd() ) {};
@@ -1052,7 +1054,7 @@ bool E2B::duty() {
 
 
   if ((secureFlag == 1) && (isLocked == 1) && (done != 0x3A)){
-    //errnum = E2B_SECURED_AND_LOCKED;
+    errnum = E2B_SECURED_AND_LOCKED;
     //#warning "Attempted communication with locked secured device."
     //Serial.println("You shall not pass!");
     return false;
@@ -1222,7 +1224,6 @@ bool E2B::presence(uint8_t delta) {
   //Default "delta" is 25, so this is 275 in that condition, totaling to 155+275=430 since the reset rise
   // docs call for a total of 480 possible from start of rise before reset timing is completed
   //This gives us 50 micros to play with, but being early is probably best for timing on read later
-  //delayMicroseconds(300 - delta);
   delayMicroseconds(300 - delta);
 
   //Modified to wait a while (roughly 50 micros) for the line to go high
@@ -1249,15 +1250,15 @@ bool E2B::presence() {
 }
 
 uint8_t E2B::sendData(char buf[], uint8_t len) {
-  uint8_t bytes_sended = 0;
+  uint8_t bytes_sent = 0;
 
   for (int i=0; i<len; i++) {
     send(buf[i]);
     if (errnum != ONEWIRE_NO_ERROR)
       break;
-    bytes_sended++;
+    bytes_sent++;
   }
-  return bytes_sended;
+  return bytes_sent;
 }
 
 uint8_t E2B::recvData(char buf[], uint8_t len) {
