@@ -24,51 +24,6 @@
 // Board-specific macros for direct GPIO
 #include "util/E2B_direct_regtype.h"
 
-// you can exclude asynchronous E2B receiving by defining this to 0
-/*#ifndef E2B_ASYNC_RECV
-#define E2B_ASYNC_RECV 1
-#endif
-
-// you can exclude E2B search by defining this to 0
-#ifndef E2B_SEARCH
-#define E2B_SEARCH 1
-#endif
-
-// you can exclude E2B CRC by defining this to 0
-#ifndef E2B_CRC
-#define E2B_CRC 1
-#endif
-
-// you can exclude E2B Checksum by defining this to 0, defaulted to 0
-#ifndef E2B_CHECKSUM
-#define E2B_CHECKSUM 0
-#endif
-
-// you can exclude E2B Hamming Codes by defining this to 0, defaulted to 0
-#ifndef E2B_HAMMING
-#define E2B_HAMMING 0
-#endif
-
-// you can exclude E2B Low-Density Parity Checks (LPDC) by defining this to 0, defaulted to 0
-#ifndef E2B_LPDC
-#define E2B_LPDC 0
-#endif
-
-// you can exclude E2B Convolution Codes by defining this to 0, defaulted to 0
-#if E2B_CONVOLUTION
-#define E2B_CONVOLUTION 0
-#endif
-
-// you can exclude E2B Parity bits by defining this to 0, defaulted to 0
-#if E2B_PARITY
-#define E2B_PARITY 0
-#endif
-
-// you can exclude E2B Aurora encoding/decoding by defining this to 0, defaulted to 0
-#ifndef E2B_AURORA
-#define E2B_AURORA 0
-#endif*/
-
 #if defined(__SAM3X8E__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__PIC32MX__) /* || defined(__IMXRT1052__) || defined(__IMXRT1062__)*/
 #define lowmark   325
 #define highmark  500
@@ -91,17 +46,17 @@
 #define EXTERNAL 1
 #define PARASITE 0
 
-#define ONEWIRE_NO_ERROR                   0
-#define ONEWIRE_READ_TIMESLOT_TIMEOUT      1
-#define ONEWIRE_WRITE_TIMESLOT_TIMEOUT     2
-#define ONEWIRE_WAIT_RESET_TIMEOUT         3
-#define ONEWIRE_VERY_LONG_RESET            4
-#define ONEWIRE_VERY_SHORT_RESET           5
-#define ONEWIRE_PRESENCE_LOW_ON_LINE       6
-#define ONEWIRE_READ_TIMESLOT_TIMEOUT_LOW  7
-#define ONEWIRE_READ_TIMESLOT_TIMEOUT_HIGH 8
+#define E2B_NO_ERROR                   0
+#define E2B_READ_TIMESLOT_TIMEOUT      1
+#define E2B_WRITE_TIMESLOT_TIMEOUT     2
+#define E2B_WAIT_RESET_TIMEOUT         3
+#define E2B_VERY_LONG_RESET            4
+#define E2B_VERY_SHORT_RESET           5
+#define E2B_PRESENCE_LOW_ON_LINE       6
+#define E2B_READ_TIMESLOT_TIMEOUT_LOW  7
+#define E2B_READ_TIMESLOT_TIMEOUT_HIGH 8
 
-#define E2B_SECURED_AND_LOCKED             9
+#define E2B_SECURED_AND_LOCKED         9
 
 class E2B{
   private:
@@ -135,13 +90,6 @@ class E2B{
     E2B() { }
     E2B(uint8_t pin) { begin(pin); }
     void begin(uint8_t pin);
-
-    float getImpedanceMicrostrip(float trackWidth, float trackThickness = 0.035, float dielectricThickness = 1.51, float er_in = 4.2);
-    float getImpedanceStripline(float trackWidth, float trackThickness = 0.035, float dielectricThickness = 1.24, float er_in = 4.2);
-    //float getCapacitanceMicrostrip(float trackWidth, float trackThickness, float dielectricThickness, float er_in = 4.2);
-    //float getCapacitanceStripline(float trackWidth, float trackThickness, float dielectricThickness, float er_in = 4.2);
-    //float getInductance(float Zo, float Co);
-
     void setBusType(uint8_t type);
     uint8_t getBusType();
     void setHostFlag(unsigned char *newAddr, bool level);
@@ -188,13 +136,13 @@ class E2B{
       //void attach44h (void (*)(void));
       //void attach48h (void (*)(void));
       //void attachB8h (void (*)(void));
-      uint8_t sendData(char buf[], uint8_t data_len);
-      uint8_t recvData(char buf[], uint8_t data_len);
-      void send(uint8_t v);
-      uint8_t recv(void);
-      void sendBit(uint8_t v);
-      uint8_t recvBit(void);
-      uint8_t crc8_alt(char addr[], uint8_t len);
+      uint8_t sendData_async(char buf[], uint8_t data_len);
+      uint8_t recvData_async(char buf[], uint8_t data_len);
+      void send_async(uint8_t v);
+      uint8_t recv_async(void);
+      void send_bit_async(uint8_t v);
+      uint8_t recv_bit_async(void);
+      //uint8_t crc8_alt(char addr[], uint8_t len);
 
       uint8_t errnum;
       char scratchpad[9];           //Originally a private variable

@@ -1,4 +1,5 @@
 //E2B DS2417 RTC example
+//https://forum.arduino.cc/t/adding-ds2417-rtc-to-existing-analog-clock-code/556083/3
 #include <E2B.h>
 
 #define E2B_pin 2
@@ -8,16 +9,9 @@ unsigned char scratchpad[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0
 
 E2B ds(E2B_pin);
 
-void setup(void) {
-  attachInterrupt(E2B_pin,respond,CHANGE);
+void setup(void){
   Serial.begin(9600);
   while(!Serial);
-  ds.init(rom);
-  ds.setScratchpad(scratchpad);
-}
-
-void respond(){
-  ds.MasterResetPulseDetection();
 }
 
 void loop(){

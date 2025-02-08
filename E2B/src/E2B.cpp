@@ -205,16 +205,16 @@ sample code bearing this copyright.
 #include "util/E2B_direct_gpio.h"
 
 //These are the major change from original, we now wait quite a bit longer for some things
-#if E2B_ASYNC_RECV
+/*#if E2B_ASYNC_RECV
   #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
   //This TIMESLOT_WAIT_READ_RETRY_COUNT is new, and only used when waiting for the line to go low on a read
   //It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
   #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
 
-  /*void E2B::ISRPIN() {
+  /*void E2B::ISRPIN(){
     (*static_E2B_instance).MasterResetPulseDetection();
-  }*/
-#endif
+  }/
+#endif*/
 
 uint8_t _pin;
 
@@ -241,110 +241,6 @@ void E2B::begin(uint8_t pin){
 void E2B::setBusType(uint8_t type){
   busType = type;
 }
-
-//Calculates characteristic impedance of a microstrip based on Waddell's equations
-float E2B::getImpedanceMicrostrip(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
-  float  pi = 3.1415;
-  float W_;
-  float Eeff;
-  float Zo;
-  float tWidth = trackWidth;                // in millimeters
-  float tThickness = trackThickness;        // in millimeters
-  float dThickness = dielectricThickness;   // in millimeters
-  float er = er_in;
-
-  Eeff = 1/sqrt(1+((12*dThickness)/tWidth));
-  if ( (tWidth/dThickness) < 1 ){
-    Eeff += 0.04 + pow(1 - (tWidth/dThickness),2);
-  }
-  Eeff *= (er - 1)/2;
-  Eeff += (er + 1)/2;
-
-  W_ = pow(tThickness/dThickness,2);
-  W_ += pow( (1/pi) / ((tWidth/tThickness) + 1.1) ,2);
-  W_ = (4*exp(1)) / W_;
-  W_ = log(W_);
-  W_ *= tThickness/pi;
-  W_ *= (1+pow(er,-1))/2;
-  W_ += tWidth;
-
-  Zo = (14 + (8/er)) / 11;
-  Zo = Zo * ((4*dThickness) / W_);
-  Zo = Zo + sqrt(pow(Zo,2) + (pow(pi,2) * ((1+pow(er,-1))/2) ));
-  Zo *= (4*dThickness) / W_;
-  Zo += 1;
-  Zo = log(Zo);
-  Zo *= 60/sqrt((2*er)+2);
-
-  return Zo;
-}
-
-//Calculates characteristic impedance of a stripline based on Waddell's equations
-float E2B::getImpedanceStripline(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
-  const float  pi = 3.1415;
-  float Weff;
-  float Zo;
-  float tWidth = trackWidth;                // in millimeters
-  float tThickness = trackThickness;        // in millimeters
-  float dThickness = dielectricThickness;   // in millimeters
-  float er = er_in;
-
-  float m = (6 * dThickness) / ((3 * dThickness) + tThickness);
-
-  Weff = pow(tThickness / ((4 * dThickness) + tThickness),2);
-  Weff += pow( (pi * tThickness) / (4 * (tWidth + (1.1 * tThickness) ) ),m);
-  Weff = sqrt(Weff);
-  Weff = er / Weff;
-  Weff = log(Weff);
-  Weff *= tThickness / pi;
-  Weff += tWidth;
-
-  Zo = (16 * dThickness) / (pi * Weff);
-  Zo = Zo + sqrt(pow(Zo,2) + 6.27);
-  Zo *= (8 * dThickness) / (pi * Weff);
-  Zo += 1;
-  Zo = log(Zo);
-  Zo *= 60/sqrt(er);
-
-  return Zo;
-}
-
-//Calculates capacitance of a trace
-/*float E2B::getCapacitanceMicrostrip(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
-  float Co;
-  float tWidth = trackWidth;                // in millimeters
-  float tThickness = trackThickness;        // in millimeters
-  float dThickness = dielectricThickness;   // in millimeters
-  float er = er_in;
-
-  Co = 2.64 * pow(10,-11);
-  Co *= er + 1.41;
-  Co /= log((5.98 * dThickness) / ((0.8*tWidth) + tThickness));
-
-  return Co;
-}
-
-float E2B::getCapacitanceStripline(float trackWidth, float trackThickness, float dielectricThickness, float er_in){
-  float Co;
-  float tWidth = trackWidth;                // in millimeters
-  float tThickness = trackThickness;        // in millimeters
-  float dThickness = dielectricThickness;   // in millimeters
-  float er = er_in;
-
-  Co = 5.55 * pow(10,-11);
-  Co *= er;
-  Co /= log((3.81 * dThickness) / ((0.8*tWidth) + tThickness));
-
-  return Co;
-}
-
-//Calculates characteristic inductance of a trace from its characteristic impedance and getCapacitanceStripline
-// From Zo = sqrt(L/C);
-float E2B::getInductance(float Zo, float Co){
-  float Lo = Co * Zo * Zo;
-
-  return Lo;
-}*/
 
 //Returns the type of the device
 // 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
@@ -396,12 +292,8 @@ void E2B::generateROM(unsigned char *newAddr){
 }
 
 
-// Perform the E2B reset function.  We will wait up to 250uS for
-// the bus to come high, if it doesn't then it is broken or shorted
-// and we return a 0;
-//
-// Returns 1 if a device asserted a presence pulse, 0 otherwise.
-//
+// Perform the E2B reset function.  We will wait up to 250uS for the bus to come high, if it doesn't then it is
+// broken or shorted and we return a 0. Returns 1 if a device asserted a presence pulse, 0 otherwise.
 uint8_t E2B::reset(void){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
@@ -431,15 +323,12 @@ uint8_t E2B::reset(void){
 	return r;
 }
 
-//
-// Write a bit. Port and bit is used to cut lookup time and provide
-// more certain timing.
-//
+// Write a bit. Port and bit is used to cut lookup time and provide more certain timing.
 void E2B::write_bit(uint8_t v){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
-	if (v & 1) {
+	if (v & 1){
 		noInterrupts();
 		DIRECT_WRITE_LOW(reg, mask);
 		DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
@@ -458,10 +347,8 @@ void E2B::write_bit(uint8_t v){
 	}
 }
 
-//
 // Read a bit. Port and bit is used to cut lookup time and provide
 // more certain timing.
-//
 uint8_t E2B::read_bit(void){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
@@ -479,14 +366,12 @@ uint8_t E2B::read_bit(void){
 	return r;
 }
 
-//
 // Write a byte. The writing code uses the active drivers to raise the
 // pin high, if you need power after the write (e.g. DS18S20 in
 // parasite power mode) then set 'power' to 1, otherwise the pin will
 // go tri-state at the end of the write to avoid heating in a short or
 // other mishap.
-//
-void E2B::write(uint8_t v, uint8_t power /* = 0 */) {
+void E2B::write(uint8_t v, uint8_t power /* = 0 */){
   uint8_t bitMask;
 
   for (bitMask = 0x01; bitMask; bitMask <<= 1){
@@ -500,10 +385,10 @@ void E2B::write(uint8_t v, uint8_t power /* = 0 */) {
   }
 }
 
-void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */) {
+void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */){
   for (uint16_t i=0; i < count ; i++)
     write(buf[i]);
-  if (!power) {
+  if (!power){
     noInterrupts();
     DIRECT_MODE_INPUT(baseReg, bitmask);
     DIRECT_WRITE_LOW(baseReg, bitmask);
@@ -511,38 +396,32 @@ void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */) 
   }
 }
 
-//
-// Read a byte
-//
-uint8_t E2B::read() {
+// Read a byte of data
+uint8_t E2B::read(){
     uint8_t bitMask;
     uint8_t r = 0;
 
-    for (bitMask = 0x01; bitMask; bitMask <<= 1) {
+    for (bitMask = 0x01; bitMask; bitMask <<= 1){
 	if ( E2B::read_bit()) r |= bitMask;
     }
     return r;
 }
 
-void E2B::read_bytes(uint8_t *buf, uint16_t count) {
+void E2B::read_bytes(uint8_t *buf, uint16_t count){
   for (uint16_t i = 0 ; i < count ; i++)
     buf[i] = read();
 }
 
-//
-// Do a ROM select
-//
+// Does a ROM select command (aka Choose ROM)
 void E2B::select(const uint8_t rom[8]){
-    write(0x55);           // Choose ROM
+    write(0x55);
 
     for (uint8_t i = 0; i < 8; i++) write(rom[i]);
 }
 
-//
-// Do a ROM skip
-//
+//Does a ROM skip command
 void E2B::skip(){
-    write(0xCC);           // Skip ROM
+    write(0xCC);
 }
 
 //Requests an unlock to a device with a secureFlag = 1.
@@ -550,7 +429,6 @@ void E2B::skip(){
 void E2B::unlock(uint8_t key){
     write(0x3A);
     write(key);
-    //delay(13);
 }
 
 void E2B::depower(){
@@ -569,7 +447,7 @@ void E2B::reset_search(){
   LastDiscrepancy = 0;
   LastDeviceFlag = false;
   LastFamilyDiscrepancy = 0;
-  for(int i = 7; ; i--) {
+  for(int i = 7; ; i--){
     ROM_NO[i] = 0;
     if ( i == 0) break;
   }
@@ -620,9 +498,9 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
    search_result = false;
 
    // if the last call was not the last one
-   if (!LastDeviceFlag) {
+   if (!LastDeviceFlag){
       // 1-Wire reset
-      if (!reset()) {
+      if (!reset()){
          // reset the search
          LastDiscrepancy = 0;
          LastDeviceFlag = false;
@@ -631,7 +509,7 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
       }
 
       // issue the search command
-      if (search_mode == true) {
+      if (search_mode == true){
         write(0xF0);   // NORMAL SEARCH
       } else {
         write(0xEC);   // CONDITIONAL SEARCH
@@ -645,23 +523,23 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
          cmp_id_bit = read_bit();
 
          // check for no devices on 1-wire
-         if ((id_bit == 1) && (cmp_id_bit == 1)) {
+         if ((id_bit == 1) && (cmp_id_bit == 1)){
             break;
          } else {
             // all devices coupled have 0 or 1
-            if (id_bit != cmp_id_bit) {
+            if (id_bit != cmp_id_bit){
                search_direction = id_bit;  // bit write value for search
             } else {
                // if this discrepancy if before the Last Discrepancy
                // on a previous next then pick the same as last time
-               if (id_bit_number < LastDiscrepancy) {
+               if (id_bit_number < LastDiscrepancy){
                   search_direction = ((ROM_NO[rom_byte_number] & rom_byte_mask) > 0);
                } else {
                   // if equal to last pick 1, if not then pick 0
                   search_direction = (id_bit_number == LastDiscrepancy);
                }
                // if 0 was picked then record its position in LastZero
-               if (search_direction == 0) {
+               if (search_direction == 0){
                   last_zero = id_bit_number;
 
                   // check for Last discrepancy in family
@@ -686,7 +564,7 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
             rom_byte_mask <<= 1;
 
             // if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
-            if (rom_byte_mask == 0) {
+            if (rom_byte_mask == 0){
                 rom_byte_number++;
                 rom_byte_mask = 1;
             }
@@ -695,12 +573,12 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
       while(rom_byte_number < 8);  // loop until through all ROM bytes 0-7
 
       // if the search was successful then
-      if (!(id_bit_number < 65)) {
+      if (!(id_bit_number < 65)){
          // search successful so set LastDiscrepancy,LastDeviceFlag,search_result
          LastDiscrepancy = last_zero;
 
          // check for last device
-         if (LastDiscrepancy == 0) {
+         if (LastDiscrepancy == 0){
             LastDeviceFlag = true;
          }
          search_result = true;
@@ -708,7 +586,7 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
    }
 
    // if no device found then reset counters so next 'search' will be like a first
-   if (!search_result || !ROM_NO[0]) {
+   if (!search_result || !ROM_NO[0]){
       LastDiscrepancy = 0;
       LastDeviceFlag = false;
       LastFamilyDiscrepancy = 0;
@@ -800,7 +678,7 @@ bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode 
             rom_byte_mask <<= 1;
 
             // if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
-            if (rom_byte_mask == 0) {
+            if (rom_byte_mask == 0){
                 rom_byte_number++;
                 rom_byte_mask = 1;
             }
@@ -841,10 +719,16 @@ bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////// E2B_ASYNC_RECV //////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if E2B_ASYNC_RECV
+
+/*#if ARDUINO_ARCH_ESP32                    //Defines special attributes for ESP32 architecture, added on 2-2-25
+#define INTERRUPT_ATTR IRAM_ATTR
+#elif ARDUINO_ARCH_ESP8266                  //Defines special attributes for ESP8266 architecture, added on 2-2-25
+#define INTERRUPT_ATTR ICACHE_RAM_ATTR
+#endif*/
 
 volatile long previous = 0;
 volatile long old_previous = 0;
@@ -854,13 +738,13 @@ void E2B::MasterResetPulseDetection(){
   old_previous = previous;
   previous = micros();
   diff = previous - old_previous;
-  if (diff >= lowmark && diff <= highmark) {
-    Serial.println("Dawg0");
+  if (diff >= lowmark && diff <= highmark){
+		Serial.println(diff);
     waitForRequestInterrupt(false);
   }
 }
 
-/*bool E2B::owsprint() {
+/*bool E2B::owsprint(){
 	//waitForRequestInterrupt(false);
 	//Serial.println("done");
   delayMicroseconds(25);
@@ -868,7 +752,7 @@ void E2B::MasterResetPulseDetection(){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
-  errnum = ONEWIRE_NO_ERROR;
+  errnum = E2B_NO_ERROR;
   noInterrupts();
   DIRECT_WRITE_LOW(reg, mask);
   DIRECT_MODE_OUTPUT(reg, mask);    // drive output low
@@ -885,23 +769,27 @@ void E2B::MasterResetPulseDetection(){
 
 	delayMicroseconds(50);
 
-	//while (recvAndProcessCmd()) {};
+	//while (recvAndProcessCmd()){};
 	recvAndProcessCmd();
 }*/
 
-void E2B::init(unsigned char rom[8]) {
+void E2B::init(unsigned char rom[8]){
 	for (int i=0; i<7; i++)
     this->rom[i] = rom[i];
-  this->rom[7] = crc8_alt(this->rom, 7);
+	#if E2B_CRC
+  	this->rom[7] = crc8(this->rom, 7);
+	#endif
 }
 
-void E2B::setScratchpad(unsigned char scratchpad[9]) {
+void E2B::setScratchpad(unsigned char scratchpad[9]){
   for (int i=0; i<8; i++)
     this->scratchpad[i] = scratchpad[i];
-  this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
+	#if E2B_CRC
+  	this->scratchpad[8] = crc8(this->scratchpad, 8);
+	#endif
 }
 
-void E2B::setPower(uint8_t power) {
+void E2B::setPower(uint8_t power){
   this->power = power;
 }
 
@@ -910,48 +798,52 @@ typedef void (*FuncPointerArray)(void);
 FuncPointerArray userFunc[256];
 void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
 	userFunc[num] = userFunction;
-	this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
+	#if E2B_CRC
+		this->scratchpad[8] = crc8(this->scratchpad, 8);
+	#endif
 }
 
 /*void (*user44hFunc)(void);
-void E2B::attach44h(void (*userFunction44h)(void)) {
+void E2B::attach44h(void (*userFunction44h)(void)){
 	user44hFunc = userFunction44h;
-	this->scratchpad[8] = crc8_alt(this->scratchpad, 8);
+	#if E2B_CRC
+		this->scratchpad[8] = crc8(this->scratchpad, 8);
+	#endif
 }
 
 void (*user48hFunc)(void);
-void E2B::attach48h(void (*userFunction48h)(void)) {
+void E2B::attach48h(void (*userFunction48h)(void)){
 	user48hFunc = userFunction48h;
 }
 
 void (*userB8hFunc)(void);
-void E2B::attachB8h(void (*userFunctionB8h)(void)) {
+void E2B::attachB8h(void (*userFunctionB8h)(void)){
 	userB8hFunc = userFunctionB8h;
 }*/
 
-bool E2B::waitForRequest(bool ignore_errors) {
-  errnum = ONEWIRE_NO_ERROR;
+bool E2B::waitForRequest(bool ignore_errors){
+  errnum = E2B_NO_ERROR;
 
-  for (;;) {
+  for (;;){
     //delayMicroseconds(40);
     //Once reset is done, it waits another 30 micros
     //Master wait is 65, so we have 35 more to send our presence now that reset is done
-    if (!waitReset(0) ) {
+    if (!waitReset(0) ){
       continue;
     }
     //Reset is complete, tell the master we are prsent
     // This will pull the line low for 125 micros (155 micros since the reset) and
     //  then wait another 275 plus whatever wait for the line to go high to a max of 480
     // This has been modified from original to wait for the line to go high to a max of 480.
-    if (!presence() ) {
+    if (!presence() ){
       continue;
     }
     //Now that the master should know we are here, we will get a command from the line
     //Because of our changes to the presence code, the line should be guranteed to be high
-    if (recvAndProcessCmd() ) {
+    if (recvAndProcessCmd() ){
       return true;
     }
-    else if ((errnum == ONEWIRE_NO_ERROR) || ignore_errors) {
+    else if ((errnum == E2B_NO_ERROR) || ignore_errors){
       continue;
     } else {
       return false;
@@ -960,8 +852,8 @@ bool E2B::waitForRequest(bool ignore_errors) {
 }
 
 //Interrupt-driven variant of waitForRequest()
-bool E2B::waitForRequestInterrupt(bool ignore_errors) {
-  errnum = ONEWIRE_NO_ERROR;
+bool E2B::waitForRequestInterrupt(bool ignore_errors){
+  errnum = E2B_NO_ERROR;
   //owsprint();
   //Reset is detected from the Interrupt by counting time between the Level-Changes
   //Once reset is done, it waits another 30 micros
@@ -972,28 +864,28 @@ bool E2B::waitForRequestInterrupt(bool ignore_errors) {
   // This will pull the line low for 125 micros (155 micros since the reset) and
   //  then wait another 275 plus whatever wait for the line to go high to a max of 480
   // This has been modified from original to wait for the line to go high to a max of 480.
-  while (!presence(50) ) {};	//50	//45 is good
-  Serial.println("Dawg2");
+  while (!presence(50) ){};	//45 is good
   //Now that the master should know we are here, we will get a command from the line
   //Because of our changes to the presence code, the line should be guranteed to be high
-  while (recvAndProcessCmd() ) {};
-  if ((errnum == ONEWIRE_NO_ERROR) || ignore_errors) {
+  while (recvAndProcessCmd() ){};
+  if ((errnum == E2B_NO_ERROR) || ignore_errors){
     //continue;
   } else {
     return false;
   }
 }
 
-bool E2B::recvAndProcessCmd() {
+bool E2B::recvAndProcessCmd(){
 	char addr[8];
   uint16_t raw = 0;
 
   for (;;){
-    uint8_t cmd = recv();
+    uint8_t cmd = recv_async();
+    //Serial.print("cmd: "); Serial.println(cmd,HEX);
 
-    if (secureFlag == 1){       //If a secure device
+    if (secureFlag == 1){       	//If a secure device
       if (isLocked){
-        if ((cmd != 0xCC) && (cmd != 0x55) && (cmd != 0xF0)){       //0xCC is an SKIP ROM command, 0x55 is an SELECT ROM command
+        if ((cmd != 0xCC) && (cmd != 0x55) && (cmd != 0xF0)){       //0xCC is an SKIP ROM command, 0x55 is an SELECT ROM command, 0xF0 is a SEARCH ROM command
           errnum = E2B_SECURED_AND_LOCKED;
           //#warning "Attempted communication with locked secured device."
           return false;
@@ -1016,13 +908,13 @@ bool E2B::recvAndProcessCmd() {
       		searchROM();
         return false;
       case 0x33: // READ ROM
-        sendData(rom, 8);
-        if (errnum != ONEWIRE_NO_ERROR)
+        sendData_async(rom, 8);
+        if (errnum != E2B_NO_ERROR)
           return false;
         break;
       case 0x55: // MATCH ROM - Choose/Select ROM
-        recvData(addr,8);
-        if (errnum != ONEWIRE_NO_ERROR)
+        recvData_async(addr,8);
+        if (errnum != E2B_NO_ERROR)
           return false;
         for (int i=0; i<8; i++)
           if (rom[i] != addr[i])
@@ -1031,11 +923,11 @@ bool E2B::recvAndProcessCmd() {
         return true;
       case 0xCC: // SKIP ROM
       	duty();
-      	if (errnum != ONEWIRE_NO_ERROR)
+      	if (errnum != E2B_NO_ERROR)
           return false;
         return true;
       default: // Unknow command
-        if (errnum == ONEWIRE_NO_ERROR)
+        if (errnum == E2B_NO_ERROR)
           break; // skip if no error
         else
           return false;
@@ -1048,8 +940,8 @@ bool E2B::recvAndProcessCmd() {
   }*/
 }
 
-bool E2B::duty() {
-	uint8_t done = recv();
+bool E2B::duty(){
+	uint8_t done = recv_async();
   scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
 
 
@@ -1062,53 +954,53 @@ bool E2B::duty() {
     isLocked = 1;
   }*/
 
-  switch (done) {
+  switch (done){
     case 0xBE: // READ SCREATCHPAD
-			sendData(scratchpad, 9);
-			if (errnum != ONEWIRE_NO_ERROR)
+			sendData_async(scratchpad, 9);
+			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;
 		case 0xB4: // READ POWERSOURCE
-			sendBit(power);
-			if (errnum != ONEWIRE_NO_ERROR)
+			send_bit_async(power);
+			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;
     case 0x3A: // UNLOCK REQUEST
       {
-        uint8_t receivedKey = recv();
-        if(receivedKey == secureKey){ //Unlocks the device if receivedKey matches the key of the secured device (unlocked for thr commands)
+        uint8_t receivedKey = recv_async();
+        if(receivedKey == secureKey){ //Unlocks the device if receivedKey matches the key of the secured device (unlocked for the commands)
           isLocked = 0;
           unlockedState = 3;    //Processes 3 commands before locking again
           //#warning "Secured device unlocked for 3 commands."
         }
-  			if (errnum != ONEWIRE_NO_ERROR)
+  			if (errnum != E2B_NO_ERROR)
   				return false;
 			}
       break;
 		/*case 0x44: // CONVERT SENSOR
 			userFunc[0x44];                       //originally user44hFunc();
-			if (errnum != ONEWIRE_NO_ERROR)
+			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;
 		case 0x48: // CONVERT SENSOR
 			userFunc[0x48];                       //originally user48hFunc();
-			if (errnum != ONEWIRE_NO_ERROR)
+			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;
 		case 0xB8: // CONVERT SENSOR
 			userFunc[0xB8];                       //originally userB8hFunc();
-			if (errnum != ONEWIRE_NO_ERROR)
+			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;*/
 		/*case 0x4E: // WRITE SCREATCHPAD
-			recvData(temp_scratchpad, 3);
+			recvData_async(temp_scratchpad, 3);
 			setScratchpad_external(temp_scratchpad);
-			if (errnum != ONEWIRE_NO_ERROR)
+			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;*/
 		default:
 			break;
-			if (errnum == ONEWIRE_NO_ERROR)
+			if (errnum == E2B_NO_ERROR)
 				break; // skip if no error
 			else
 				return false;
@@ -1121,17 +1013,17 @@ uint8_t E2B::getScratchpad(uint8_t i){
   return scratchpad[i];
 }
 
-bool E2B::searchROM() {
+bool E2B::searchROM(){
   uint8_t bitmask;
   uint8_t bit_send, bit_recv;
 
-  for (int i=0; i<8; i++) {
-    for (bitmask = 0x01; bitmask; bitmask <<= 1) {
+  for (int i=0; i<8; i++){
+    for (bitmask = 0x01; bitmask; bitmask <<= 1){
       bit_send = (bitmask & rom[i])?1:0;
-      sendBit(bit_send);
-      sendBit(!bit_send);
-      bit_recv = recvBit();
-      if (errnum != ONEWIRE_NO_ERROR)
+      send_bit_async(bit_send);
+      send_bit_async(!bit_send);
+      bit_recv = recv_bit_async();
+      if (errnum != E2B_NO_ERROR)
         return false;
       if (bit_recv != bit_send)
         return false;
@@ -1140,30 +1032,30 @@ bool E2B::searchROM() {
   return true;
 }
 
-bool E2B::waitReset(uint16_t timeout_ms) {
+bool E2B::waitReset(uint16_t timeout_ms){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
   unsigned long time_stamp;
 
-  errnum = ONEWIRE_NO_ERROR;
+  errnum = E2B_NO_ERROR;
   noInterrupts();
   DIRECT_MODE_INPUT(reg, mask);
   interrupts();
 
   //Wait for the line to fall
-  if (timeout_ms != 0) {
+  if (timeout_ms != 0){
     time_stamp = micros() + timeout_ms*1000;
-    while (DIRECT_READ(reg, mask)) {
-      if (micros() > time_stamp) {
-        errnum = ONEWIRE_WAIT_RESET_TIMEOUT;
+    while (DIRECT_READ(reg, mask)){
+      if (micros() > time_stamp){
+        errnum = E2B_WAIT_RESET_TIMEOUT;
         return false;
       }
     }
   } else {
     //Will wait forever for the line to fall
-    while (DIRECT_READ(reg, mask)) {};
+    while (DIRECT_READ(reg, mask)){};
   }
 
   //Set to wait for rise up to 540 micros
@@ -1172,19 +1064,19 @@ bool E2B::waitReset(uint16_t timeout_ms) {
   time_stamp = micros() + 540;
 
   //Wait for the rise on the line up to 540 micros
-  while (DIRECT_READ(reg, mask) == 0) {
-    if (micros() > time_stamp) {
-      errnum = ONEWIRE_VERY_LONG_RESET;
+  while (DIRECT_READ(reg, mask) == 0){
+    if (micros() > time_stamp){
+      errnum = E2B_VERY_LONG_RESET;
       return false;
     }
   }
 
   //If the master pulled low for exactly 500, then this will be 40 wait time
   // Recommended for master is 480, which would be 60 here then
-  // Max is 640, which makes this negative, but it returns above as a "ONEWIRE_VERY_LONG_RESET"
+  // Max is 640, which makes this negative, but it returns above as a "E2B_VERY_LONG_RESET"
   // this gives an extra 10 to 30 micros befor calling the reset invalid
-  if ((time_stamp - micros()) > 70) {
-    errnum = ONEWIRE_VERY_SHORT_RESET;
+  if ((time_stamp - micros()) > 70){
+    errnum = E2B_VERY_SHORT_RESET;
     return false;
   }
 
@@ -1196,11 +1088,11 @@ bool E2B::waitReset(uint16_t timeout_ms) {
   //Master wait is 65, so we have 35 more to send our presence now that reset is done
   return true;
 }
-/*bool E2B::waitReset() {
+/*bool E2B::waitReset(){
   return waitReset(1000);
 }*/
 
-bool E2B::presence(uint8_t delta) {
+bool E2B::presence(uint8_t delta){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
@@ -1208,7 +1100,7 @@ bool E2B::presence(uint8_t delta) {
   //Reset code already waited 30 prior to calling this
   // Master will not read until 70 recommended, but could read as early as 60
   // so we should be well enough ahead of that. Arduino waits 65
-  errnum = ONEWIRE_NO_ERROR;
+  errnum = E2B_NO_ERROR;
   noInterrupts();
   DIRECT_WRITE_LOW(reg, mask);
   DIRECT_MODE_OUTPUT(reg, mask);    // drive output low
@@ -1231,78 +1123,94 @@ bool E2B::presence(uint8_t delta) {
   // to the 480 standard spec and the 490 used on the Arduino master code
   // anything longer then is most likely something going wrong.
   uint8_t retries = 25;
-  while (!DIRECT_READ(reg, mask));
-  do {
-	if ( retries-- == 0)
-		//return false;
-	delayMicroseconds(2);
-  } while(!DIRECT_READ(reg, mask));
-  /*
-  if ( !DIRECT_READ(reg, mask)) {
-      errnum = ONEWIRE_PRESENCE_LOW_ON_LINE;
+  #if ARDUINO_ARCH_ESP32                           //Special procedure for ESP32 devices
+    while (!DIRECT_READ(reg, mask));
+    do {
+    	if (retries-- == 0)// return 0;
+      	delayMicroseconds(2);
+    } while(!DIRECT_READ(reg, mask));
+
+    if (!DIRECT_READ(reg, mask)){
+      errnum = E2B_PRESENCE_LOW_ON_LINE;
       return false;
-  } else
+    }else{
       return true;
-  */
+    }
+  #else                                             //Standard procedure for all other microcontrollers
+    while (!DIRECT_READ(reg, mask));
+    do {
+    if (retries-- == 0)
+      //return false;
+    delayMicroseconds(2);
+    } while(!DIRECT_READ(reg, mask));
+    /*
+    if ( !DIRECT_READ(reg, mask)){
+        errnum = E2B_PRESENCE_LOW_ON_LINE;
+        return false;
+    } else
+        return true;
+    */
+  #endif
+
 }
-bool E2B::presence() {
+
+bool E2B::presence(){
   return presence(25);
 }
 
-uint8_t E2B::sendData(char buf[], uint8_t len) {
+uint8_t E2B::sendData_async(char buf[], uint8_t len){
   uint8_t bytes_sent = 0;
 
-  for (int i=0; i<len; i++) {
-    send(buf[i]);
-    if (errnum != ONEWIRE_NO_ERROR)
+  for (int i=0; i<len; i++){
+    send_async(buf[i]);
+    if (errnum != E2B_NO_ERROR)
       break;
     bytes_sent++;
   }
   return bytes_sent;
 }
 
-uint8_t E2B::recvData(char buf[], uint8_t len) {
+uint8_t E2B::recvData_async(char buf[], uint8_t len){
   uint8_t bytes_received = 0;
 
-  for (int i=0; i<len; i++) {
-    buf[i] = recv();
-    if (errnum != ONEWIRE_NO_ERROR)
+  for (int i=0; i<len; i++){
+    buf[i] = recv_async();
+    if (errnum != E2B_NO_ERROR)
       break;
     bytes_received++;
   }
   return bytes_received;
 }
 
-void E2B::send(uint8_t v) {
-  errnum = ONEWIRE_NO_ERROR;
-  for (uint8_t bitmask = 0x01; bitmask && (errnum == ONEWIRE_NO_ERROR); bitmask <<= 1)
-  	sendBit((bitmask & v)?1:0);
+void E2B::send_async(uint8_t v){
+  errnum = E2B_NO_ERROR;
+  for (uint8_t bitmask = 0x01; bitmask && (errnum == E2B_NO_ERROR); bitmask <<= 1)
+  	send_bit_async((bitmask & v)?1:0);
 }
 
-uint8_t E2B::recv() {
+uint8_t E2B::recv_async(){
   uint8_t r = 0;
 
-  errnum = ONEWIRE_NO_ERROR;
-  for (uint8_t bitmask = 0x01; bitmask && (errnum == ONEWIRE_NO_ERROR); bitmask <<= 1)
-    if (recvBit())
+  errnum = E2B_NO_ERROR;
+  for (uint8_t bitmask = 0x01; bitmask && (errnum == E2B_NO_ERROR); bitmask <<= 1)
+		if (recv_bit_async())
       r |= bitmask;
   return r;
 }
 
-void E2B::sendBit(uint8_t v) {
+void E2B::send_bit_async(uint8_t v){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
   noInterrupts();
   DIRECT_MODE_INPUT(reg, mask);
-  //waitTimeSlot waits for a low to high transition followed by a high to low within the time-out
   uint8_t wt = waitTimeSlot();
-  if (wt != 1 ) { //1 is success, others are failure
-    if (wt == 10) {
-      errnum = ONEWIRE_READ_TIMESLOT_TIMEOUT_LOW;
+  if (wt != 1){					//1 is nominal
+    if (wt == 10){
+      errnum = E2B_READ_TIMESLOT_TIMEOUT_LOW;
     } else {
-      errnum = ONEWIRE_READ_TIMESLOT_TIMEOUT_HIGH;
+      errnum = E2B_READ_TIMESLOT_TIMEOUT_HIGH;
     }
     interrupts();
     return;
@@ -1321,34 +1229,45 @@ void E2B::sendBit(uint8_t v) {
   return;
 }
 
-uint8_t E2B::recvBit(void) {
+uint8_t E2B::recv_bit_async(void){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
-  uint8_t r;
 
   noInterrupts();
   DIRECT_MODE_INPUT(reg, mask);
-  //waitTimeSlotRead is a customized version of the original which was also
-  // used by the "write" side of things.
   uint8_t wt = waitTimeSlotRead();
-  if (wt != 1 ) { //1 is success, others are failure
-    if (wt == 10) {
-      errnum = ONEWIRE_READ_TIMESLOT_TIMEOUT_LOW;
+  if (wt != 1){					//1 is nominal
+    if (wt == 10){
+      errnum = E2B_READ_TIMESLOT_TIMEOUT_LOW;
     } else {
-      errnum = ONEWIRE_READ_TIMESLOT_TIMEOUT_HIGH;
+      errnum = E2B_READ_TIMESLOT_TIMEOUT_HIGH;
     }
     interrupts();
     return 0;
   }
-  delayMicroseconds(30);
-  //TODO Consider reading earlier: delayMicroseconds(15);
-  r = DIRECT_READ(reg, mask);
-  interrupts();
-  return r;
+
+	#if ARDUINO_ARCH_ESP32                           //Special procedure for ESP32 devices
+		#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(20)
+  	//#define TIMESLOT_WAIT_RETRY_COUNT (20*(F_CPU / 1000000L))
+		uint16_t retries = TIMESLOT_WAIT_RETRY_COUNT; 											 //TIMESLOT_WAIT_RETRY_COUNT;
+		while ((!DIRECT_READ(reg, mask)) && (--retries == 0))
+			;
+		interrupts();
+		return (retries > 0);
+  #else                                             //Standard procedure for all other microcontrollers
+		delayMicroseconds(30);    											//TODO Consider reading earlier: delayMicroseconds(15);
+		uint8_t r = DIRECT_READ(reg, mask);
+		interrupts();
+	  return r;
+	#endif
 }
 
-uint8_t E2B::waitTimeSlot() {
+//Waits for a low to high transition followed by a high to low within the time-out
+uint8_t E2B::waitTimeSlot(){
+  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+  //#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L)) / 10L
+
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
@@ -1358,22 +1277,27 @@ uint8_t E2B::waitTimeSlot() {
   //If the line is already high, this is basically skipped
   retries = TIMESLOT_WAIT_RETRY_COUNT;
   //While line is low, retry
-  while ( !DIRECT_READ(reg, mask))
+  while (!DIRECT_READ(reg, mask))
     if (--retries == 0)
       return 10;
 
   //Wait for a fall form 1 to 0 on the line for timeout duration
   retries = TIMESLOT_WAIT_RETRY_COUNT;
-  while ( DIRECT_READ(reg, mask));
+  while (DIRECT_READ(reg, mask));
     if (--retries == 0)
       return 20;
 
   return 1;
 }
 
-//This is a copy of what was orig just "waitTimeSlot"
-// it is customized for the reading side of things
-uint8_t E2B::waitTimeSlotRead() {
+//Variant of waitTimeSlot used for reading
+uint8_t E2B::waitTimeSlotRead(){
+  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+  //#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L)) / 10L
+  //It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
+  #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
+  //#define TIMESLOT_WAIT_READ_RETRY_COUNT (135*(F_CPU / 1000000L)) / 10L
+
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
@@ -1384,8 +1308,8 @@ uint8_t E2B::waitTimeSlotRead() {
   //If the line is already high, this is basically skipped
   retries = TIMESLOT_WAIT_RETRY_COUNT;
   //While line is low, retry
-  while ( !DIRECT_READ(reg, mask))
-    if (--retries == 0)
+  while (!DIRECT_READ(reg, mask))
+		if (--retries == 0)
       return 10;
 
   //TODO Seems to me that the above loop should drop out immediately because
@@ -1396,22 +1320,20 @@ uint8_t E2B::waitTimeSlotRead() {
 
   //Wait for a fall form 1 to 0 on the line for timeout duration
   retries = TIMESLOT_WAIT_READ_RETRY_COUNT;
-  while ( DIRECT_READ(reg, mask));
-    if (--retries == 0)
-      return 20;
+  while (DIRECT_READ(reg, mask));
+		if (--retries == 0)
+			return 20;
 
-  return 1;
+	return 1;
 }
 
-//
-// Compute a Dallas Semiconductor 8-bit CRC directly.
-//
-uint8_t E2B::crc8_alt(char addr[], uint8_t len) {
+// Compute a Dallas Semiconductor 8-bit CRC
+/*uint8_t E2B::crc8_alt(char addr[], uint8_t len){
   uint8_t crc = 0;
 
-  while (len--) {
+  while (len--){
     uint8_t inbyte = *addr++;
-    for (uint8_t i = 8; i; i--) {
+    for (uint8_t i = 8; i; i--){
       uint8_t mix = (crc ^ inbyte) & 0x01;
       crc >>= 1;
       if (mix) crc ^= 0x8C;
@@ -1419,26 +1341,22 @@ uint8_t E2B::crc8_alt(char addr[], uint8_t len) {
     }
   }
   return crc;
-}
+}*/
 
 #endif    //E2B_ASYNC_RECV
 
 
 
 #if E2B_CRC
-// The 1-Wire CRC scheme is described in Maxim Application Note 27:
-// "Understanding and Using Cyclic Redundancy Checks with Maxim iButton Products"
-//
-//
-// Compute a Dallas Semiconductor 8 bit CRC directly.
-// this is much slower, but a little smaller, than the lookup table.
-//
+//Computes a Dallas Semiconductor 8-bit CRC directly.
+//The 1-Wire CRC scheme is described in Maxim Application Note 27:
+//"Understanding and Using Cyclic Redundancy Checks with Maxim iButton Products"
 uint8_t E2B::crc8(const uint8_t *addr, uint8_t len){
 	uint8_t crc = 0;
 
-	while (len--) {
+	while (len--){
 		uint8_t inbyte = *addr++;
-		for (uint8_t i = 8; i; i--) {
+		for (uint8_t i = 8; i; i--){
 			uint8_t mix = (crc ^ inbyte) & 0x01;
 			crc >>= 1;
 			if (mix) crc ^= 0x8C;
@@ -1457,7 +1375,7 @@ uint8_t E2B::crc8(const uint8_t *addr, uint8_t len){
 //    buf[2] = 0x00;    // MSB address
 //    WriteBytes(net, buf, 3);    // Write 3 cmd bytes
 //    ReadBytes(net, buf+3, 10);  // Read 6 data bytes, 2 0xFF, 2 CRC16
-//    if (!CheckCRC16(buf, 11, &buf[11])) {
+//    if (!CheckCRC16(buf, 11, &buf[11])){
 //        // Handle error.
 //    }
 //
@@ -1489,7 +1407,7 @@ uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
     static const uint8_t oddparity[16] =
         { 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0 };
 
-    for (uint16_t i = 0 ; i < len ; i++) {
+    for (uint16_t i = 0 ; i < len ; i++){
       // Even though we're just copying a byte from the input,
       // we'll be doing 16-bit computation with it.
       uint16_t cdata = input[i];
@@ -1510,7 +1428,7 @@ uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
 #endif    //E2B_CRC
 
 #if E2B_CHECKSUM
-// Computes an standard XOR checksum
+// Computes a standard XOR checksum
 uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
   uint8_t checksum = 0;
   for (int i=0; i < len; i++) checksum ^= addr[i];
@@ -1526,11 +1444,11 @@ uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
 -This implementation assumes a single-bit error. For multiple-bit errors, consider using more advanced error-correcting codes.
 
 /*Test sketch:
-void setup() {
+void setup(){
   Serial.begin(9600);
 }
 
-void loop() {
+void loop(){
   // Example data to encode
   byte data[] = {0b1011};
 
@@ -1559,7 +1477,7 @@ byte* E2B::hammingEncode(byte* data, int length){
   static byte encodedData[2];
   byte p1, p2, p3;
 
-  for (int i = 0; i < length; i++) {
+  for (int i = 0; i < length; i++){
     p1 = ((data[i] >> 0) & 1) ^ ((data[i] >> 2) & 1) ^ ((data[i] >> 3) & 1);
     p2 = ((data[i] >> 0) & 1) ^ ((data[i] >> 1) & 1) ^ ((data[i] >> 3) & 1);
     p3 = ((data[i] >> 1) & 1) ^ ((data[i] >> 2) & 1) ^ ((data[i] >> 3) & 1);
@@ -1573,14 +1491,14 @@ byte* E2B::hammingDecode(byte* encodedData){
   static byte decodedData[2];
   byte s1, s2, s3, error;
 
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 1; i++){
     s1 = ((encodedData[i] >> 0) & 1) ^ ((encodedData[i] >> 2) & 1) ^ ((encodedData[i] >> 4) & 1) ^ ((encodedData[i] >> 6) & 1);
     s2 = ((encodedData[i] >> 1) & 1) ^ ((encodedData[i] >> 2) & 1) ^ ((encodedData[i] >> 5) & 1) ^ ((encodedData[i] >> 6) & 1);
     s3 = ((encodedData[i] >> 3) & 1) ^ ((encodedData[i] >> 4) & 1) ^ ((encodedData[i] >> 5) & 1) ^ ((encodedData[i] >> 6) & 1);
     error = (s1 << 0) | (s2 << 1) | (s3 << 2);
 
     // Correct single-bit error
-    if (error != 0) {
+    if (error != 0){
       encodedData[i] ^= (1 << (error - 1));
     }
     decodedData[i] = encodedData[i] & 0x0F;
@@ -1617,7 +1535,7 @@ void setup(){
   // receivedData[3] ^= 0x01;
 
   // Copy encoded data to received data
-  for (int i = 0; i < blockSize + numParityBits; i++) {
+  for (int i = 0; i < blockSize + numParityBits; i++){
     receivedData[i] = encodedData[i];
   }
 
@@ -1625,13 +1543,13 @@ void setup(){
   ldpcDecode(receivedData, decodedData, blockSize, numParityBits, numIterations);
 
   Serial.print("Original Data: ");
-  for (int i = 0; i < blockSize; i++) {
+  for (int i = 0; i < blockSize; i++){
     Serial.print(data[i], HEX);
   }
   Serial.println();
 
   Serial.print("Decoded Data: ");
-  for (int i = 0; i < blockSize; i++) {
+  for (int i = 0; i < blockSize; i++){
     Serial.print(decodedData[i], HEX);
   }
   Serial.println();
@@ -1646,14 +1564,14 @@ void E2B::ldpcEncode(byte* data, byte* encodedData, int blockSize, int numParity
   byte temp;
 
   // Initialize encoded data with data bits
-  for (i = 0; i < blockSize; i++) {
+  for (i = 0; i < blockSize; i++){
     encodedData[i] = data[i];
   }
 
   // Calculate parity bits
-  for (i = 0; i < numParityBits; i++) {
+  for (i = 0; i < numParityBits; i++){
     temp = 0;
-    for (j = 0; j < blockSize; j++) {
+    for (j = 0; j < blockSize; j++){
       temp ^= (encodedData[j] & (1 << i)) ? 1 : 0;
     }
     encodedData[blockSize + i] = temp;
@@ -1667,33 +1585,33 @@ void E2B::ldpcDecode(byte* receivedData, byte* decodedData, int blockSize, int n
   byte temp;
 
   // Initialize syndrome
-  for (i = 0; i < numParityBits; i++) {
+  for (i = 0; i < numParityBits; i++){
     syndrome[i] = 0;
   }
 
   // Calculate syndrome
-  for (i = 0; i < numParityBits; i++) {
+  for (i = 0; i < numParityBits; i++){
     temp = 0;
-    for (j = 0; j < blockSize; j++) {
+    for (j = 0; j < blockSize; j++){
       temp ^= (receivedData[j] & (1 << i)) ? 1 : 0;
     }
     syndrome[i] = temp ^ receivedData[blockSize + i];
   }
 
   // Iterative decoding
-  for (k = 0; k < numIterations; k++) {
-    for (i = 0; i < blockSize; i++) {
+  for (k = 0; k < numIterations; k++){
+    for (i = 0; i < blockSize; i++){
       temp = receivedData[i];
-      for (j = 0; j < numParityBits; j++) {
+      for (j = 0; j < numParityBits; j++){
         temp ^= (syndrome[j] & (1 << i)) ? 1 : 0;
       }
       receivedData[i] = temp;
     }
 
     // Update syndrome
-    for (i = 0; i < numParityBits; i++) {
+    for (i = 0; i < numParityBits; i++){
       temp = 0;
-      for (j = 0; j < blockSize; j++) {
+      for (j = 0; j < blockSize; j++){
         temp ^= (receivedData[j] & (1 << i)) ? 1 : 0;
       }
       syndrome[i] = temp ^ receivedData[blockSize + i];
@@ -1701,7 +1619,7 @@ void E2B::ldpcDecode(byte* receivedData, byte* decodedData, int blockSize, int n
   }
 
   // Copy decoded data
-  for (i = 0; i < blockSize; i++) {
+  for (i = 0; i < blockSize; i++){
     decodedData[i] = receivedData[i];
   }
 }
@@ -1723,7 +1641,7 @@ byte encodedData[2 * dataLength];
 byte receivedData[2 * dataLength];
 byte decodedData[dataLength];
 
-void setup() {
+void setup(){
   Serial.begin(9600);
 
   // Encode data
@@ -1733,7 +1651,7 @@ void setup() {
   // receivedData[3] ^= 0x01;
 
   // Copy encoded data to received data
-  for (int i = 0; i < 2 * dataLength; i++) {
+  for (int i = 0; i < 2 * dataLength; i++){
     receivedData[i] = encodedData[i];
   }
 
@@ -1741,13 +1659,13 @@ void setup() {
   convolutionalDecode(receivedData, decodedData, dataLength, constraintLength);
 
   Serial.print("Original Data: ");
-  for (int i = 0; i < dataLength; i++) {
+  for (int i = 0; i < dataLength; i++){
     Serial.print(data[i], HEX);
   }
   Serial.println();
 
   Serial.print("Decoded Data: ");
-  for (int i = 0; i < dataLength; i++) {
+  for (int i = 0; i < dataLength; i++){
     Serial.print(decodedData[i], HEX);
   }
   Serial.println();
@@ -1762,14 +1680,14 @@ void E2B::convolutionalEncode(byte* data, byte* encodedData, int dataLength, int
   byte shiftRegister[constraintLength];
 
   // Initialize shift register
-  for (i = 0; i < constraintLength; i++) {
+  for (i = 0; i < constraintLength; i++){
     shiftRegister[i] = 0;
   }
 
   // Encode data
-  for (i = 0; i < dataLength; i++) {
+  for (i = 0; i < dataLength; i++){
     // Shift data into shift register
-    for (j = constraintLength - 1; j > 0; j--) {
+    for (j = constraintLength - 1; j > 0; j--){
       shiftRegister[j] = shiftRegister[j - 1];
     }
     shiftRegister[0] = data[i];
@@ -1788,7 +1706,7 @@ void E2B::convolutionalDecode(byte* receivedData, byte* decodedData, int dataLen
   int pathMetrics[constraintLength];
 
   // Initialize trellis and branch metrics
-  for (i = 0; i < constraintLength; i++) {
+  for (i = 0; i < constraintLength; i++){
     trellis[i][0] = 0;
     trellis[i][1] = 0;
     branchMetrics[i][0] = 0;
@@ -1796,15 +1714,15 @@ void E2B::convolutionalDecode(byte* receivedData, byte* decodedData, int dataLen
   }
 
   // Decode received data
-  for (i = 0; i < dataLength; i++) {
+  for (i = 0; i < dataLength; i++){
     // Compute branch metrics
-    for (j = 0; j < constraintLength; j++) {
+    for (j = 0; j < constraintLength; j++){
       branchMetrics[j][0] = (receivedData[2 * i] == (trellis[j][0] ^ trellis[j][1] ^ trellis[j][2])) ? 0 : 1;
       branchMetrics[j][1] = (receivedData[2 * i + 1] == (trellis[j][0] ^ trellis[j][2])) ? 0 : 1;
     }
 
     // Update trellis and path metrics
-    for (j = 0; j < constraintLength; j++) {
+    for (j = 0; j < constraintLength; j++){
       pathMetrics[j] = branchMetrics[j][0] + (j == 0 ? 0 : pathMetrics[j - 1]);
       trellis[j][0] = (j == 0 ? 0 : trellis[j - 1][0]);
       trellis[j][1] = (j == 0 ? 0 : trellis[j - 1][1]);
@@ -1812,8 +1730,8 @@ void E2B::convolutionalDecode(byte* receivedData, byte* decodedData, int dataLen
 
     // Select most likely path
     k = 0;
-    for (j = 1; j < constraintLength; j++) {
-      if (pathMetrics[j] < pathMetrics[k]) {
+    for (j = 1; j < constraintLength; j++){
+      if (pathMetrics[j] < pathMetrics[k]){
         k = j;
       }
     }
@@ -1863,7 +1781,7 @@ void E2B::sendByte(byte data){
 
 byte E2B::calculateParity(byte data){
   byte parity = 0;
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 8; i++){
     parity ^= (data >> i) & 1;
   }
   return parity;
@@ -1873,7 +1791,7 @@ void E2B::receiveByte(){
   byte data = Serial.read();
   byte parity = Serial.read();
   byte calculatedParity = calculateParity(data);
-  if (parity != calculatedParity) {
+  if (parity != calculatedParity){
     // Error detected!
   }
 }
@@ -1989,11 +1907,11 @@ byte decodedData[dataSize];
 
 
 
-void setup() {
+void setup(){
   Serial.begin(9600);
 
   //Initialize data
-  for (int i=0; i < dataSize; i++) {
+  for (int i=0; i < dataSize; i++){
     data[i] = random(256); // Fill with random data
   }
 
@@ -2003,14 +1921,14 @@ void setup() {
 
   // Verify decoded data
   bool match = true;
-  for (int i = 0; i < dataSize; i++) {
-    if (data[i] != decodedData[i]) {
+  for (int i = 0; i < dataSize; i++){
+    if (data[i] != decodedData[i]){
       match = false;
       break;
     }
   }
 
-  if (match) {
+  if (match){
     Serial.println("Decoded data matches original data");
   } else {
     Serial.println("Error: Decoded data does not match original data");
@@ -2022,10 +1940,10 @@ void loop(){
 */
 uint32_t E2B::calculateCrc32(byte* data, int size){
   uint32_t crc = 0xFFFFFFFF;
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++){
     crc = crc ^ data[i];
-    for (int j = 0; j < 8; j++) {
-      if (crc & 1) {
+    for (int j = 0; j < 8; j++){
+      if (crc & 1){
         crc = (crc >> 1) ^ 0xEDB88320;
       } else {
         crc = crc >> 1;
@@ -2038,9 +1956,9 @@ uint32_t E2B::calculateCrc32(byte* data, int size){
 void E2B::calculateEcc(byte* data, int size, byte* ecc){
   // Simplified Reed-Solomon code implementation
   // This is a basic example and may not provide optimal error correction
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < 16; i++){
     ecc[i] = 0;
-    for (int j = 0; j < size; j++) {
+    for (int j = 0; j < size; j++){
       ecc[i] ^= data[j];
     }
   }
@@ -2048,7 +1966,7 @@ void E2B::calculateEcc(byte* data, int size, byte* ecc){
 
 uint32_t E2B::calculateChecksum(byte* data, int size){
   uint32_t checksum = 0;
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++){
     checksum += data[i];
   }
   return checksum;
@@ -2057,9 +1975,9 @@ uint32_t E2B::calculateChecksum(byte* data, int size){
 void E2B::calculateSignature(byte* data, int size, byte* signature){
   // ECDSA signature implementation
   // This is a basic example and may not provide optimal security
-  for (int i = 0; i < 64; i++) {
+  for (int i = 0; i < 64; i++){
     signature[i] = 0;
-    for (int j = 0; j < size; j++) {
+    for (int j = 0; j < size; j++){
       signature[i] ^= data[j];
     }
   }
@@ -2068,8 +1986,8 @@ void E2B::calculateSignature(byte* data, int size, byte* signature){
 bool E2B::verifySignature(byte* data, int size, byte* signature){
   byte calculatedSignature[64];
   calculateSignature(data, size, calculatedSignature);
-  for (int i = 0; i < 64; i++) {
-    if (calculatedSignature[i] != signature[i]) {
+  for (int i = 0; i < 64; i++){
+    if (calculatedSignature[i] != signature[i]){
       return false;
     }
   }
@@ -2080,9 +1998,9 @@ void E2B::correctErrors(byte* data, int size, byte* ecc, byte* crc){
   // ECC and CRC correction implementation
   // This is a basic example and may not provide optimal error correction
   uint32_t calculatedCrc = calculateCrc32(data, size);
-  if (calculatedCrc != *(uint32_t*)crc) {
+  if (calculatedCrc != *(uint32_t*)crc){
     // Error detected, attempt correction
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < size; i++){
       data[i] ^= ecc[i];
     }
   }
@@ -2091,11 +2009,11 @@ void E2B::correctErrors(byte* data, int size, byte* ecc, byte* crc){
 void E2B::interleaveFragments(byte* encodedData, int numFragments, int fragmentSize){
   // Fragment interleaving implementation
   byte temp[fragmentSize];
-  for (int i = 0; i < numFragments; i++) {
-    for (int j = 0; j < fragmentSize; j++) {
+  for (int i = 0; i < numFragments; i++){
+    for (int j = 0; j < fragmentSize; j++){
       temp[j] = encodedData[i * fragmentSize + j];
     }
-    for (int j = 0; j < fragmentSize; j++) {
+    for (int j = 0; j < fragmentSize; j++){
       encodedData[i * fragmentSize + j] = temp[(i + j) % fragmentSize];
     }
   }
@@ -2104,11 +2022,11 @@ void E2B::interleaveFragments(byte* encodedData, int numFragments, int fragmentS
 void E2B::deinterleaveFragments(byte* encodedData, int numFragments, int fragmentSize){
   // Fragment de-interleaving implementation
   byte temp[fragmentSize];
-  for (int i = 0; i < numFragments; i++) {
-    for (int j = 0; j < fragmentSize; j++) {
+  for (int i = 0; i < numFragments; i++){
+    for (int j = 0; j < fragmentSize; j++){
       temp[(i + j) % fragmentSize] = encodedData[i * fragmentSize + j];
     }
-    for (int j = 0; j < fragmentSize; j++) {
+    for (int j = 0; j < fragmentSize; j++){
       encodedData[i * fragmentSize + j] = temp[j];
     }
   }
@@ -2123,12 +2041,12 @@ void E2B::auroraEncode(byte* data, int dataSize, byte* encodedData){
   int signatureSize = 64; // ECDSA signature
 
   // Fragment data
-  /*for (int i = 0; i < numFragments; i++) {
+  /*for (int i = 0; i < numFragments; i++){
     int fragmentStart = i * fragmentSize;
   }*/
 
   // Fragment data
-  for (int i = 0; i < numFragments; i++) {
+  for (int i = 0; i < numFragments; i++){
     int fragmentStart = i * fragmentSize;
     int fragmentEnd = min(fragmentStart + fragmentSize, dataSize);
 
@@ -2172,11 +2090,11 @@ void E2B::auroraDecode(byte* encodedData, int encodedSize, byte* decodedData){
   // De-interleave fragments
   deinterleaveFragments(encodedData, numFragments, fragmentSize);
 
-  for (int i = 0; i < numFragments; i++) {
+  for (int i = 0; i < numFragments; i++){
     int fragmentStart = i * fragmentSize;
 
     // Verify digital signature (ECDSA)
-    if (!verifySignature(&encodedData[fragmentStart], fragmentSize, &encodedData[encodedSize - 64])) {
+    if (!verifySignature(&encodedData[fragmentStart], fragmentSize, &encodedData[encodedSize - 64])){
       // Error: signature mismatch
       Serial.println("Error: Signature mismatch");
       return;
@@ -2184,7 +2102,7 @@ void E2B::auroraDecode(byte* encodedData, int encodedSize, byte* decodedData){
 
     // Check checksum (Adler-32)
     uint32_t checksum = calculateChecksum(&encodedData[fragmentStart], fragmentSize);
-    if (checksum != *(uint32_t*)&encodedData[fragmentStart + fragmentSize + 4 * i]) {
+    if (checksum != *(uint32_t*)&encodedData[fragmentStart + fragmentSize + 4 * i]){
       // Error: checksum mismatch
       Serial.println("Error: Checksum mismatch");
       return;

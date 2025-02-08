@@ -12,7 +12,7 @@
 unsigned char rom[8] = {FAMILYCODE, 0xAD, 0xDA, 0xCE, 0x0F, 0x00, 0x11, 0x00};
 unsigned char scratchpad[9] = {0x00, 0x00, 0x4B, 0x46, 0x7F, 0xFF, 0x00, 0x10, 0x00};
 
-E2B ds(E2B_pin);  // on pin 10 (a 4.7K resistor is necessary)
+E2B ds(E2B_pin);  // on pin 2 (a 4.7K resistor is necessary)
 
 byte addr[8];
 

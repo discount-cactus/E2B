@@ -14,19 +14,12 @@ E2B e2b(E2B_pin);  // on pin 2 (a 4.7K resistor is necessary)
 //uint8_t KEY = 0x30; //CHANGE TO SECURED DEVICE KEY TO UNLOCK A SECURED DEVICE
 
 void setup(){
-  attachInterrupt(E2B_pin,respond,CHANGE);
   Serial.begin(9600);
   while(!Serial);
   Serial.println("E2B Master Node Test.");
-  e2b.init(rom);
-  e2b.setScratchpad(scratchpad);
 
   //setHostFlag(rom,1);                 //Use when connecting multiple masters to the bus
   //e2b.setDeviceType(POINTTOPOINT);    //Can use this when only one device is connected
-}
-
-void respond(){
-  e2b.MasterResetPulseDetection();
 }
 
 void loop(){

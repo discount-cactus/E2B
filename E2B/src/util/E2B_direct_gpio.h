@@ -105,11 +105,6 @@
 #define DIRECT_WRITE_HIGH(base, mask)   ((*(base+8+2)) = (mask))          //LATXSET + 0x28
 
 #elif defined(ARDUINO_ARCH_ESP8266)
-// Special note: I depend on the ESP community to maintain these definitions and
-// submit good pull requests.  I can not answer any ESP questions or help you
-// resolve any problems related to ESP chips.  Please do not contact me and please
-// DO NOT CREATE GITHUB ISSUES for ESP support.  All ESP questions must be asked
-// on ESP community forums.
 #define PIN_TO_BASEREG(pin)             ((volatile uint32_t*) GPO)
 #define PIN_TO_BITMASK(pin)             (1 << pin)
 #define IO_REG_TYPE uint32_t
@@ -244,6 +239,19 @@ void directModeOutput(IO_REG_TYPE pin){
 #define interrupts() portEXIT_CRITICAL(&mux);}
 //#warning "ESP32 E2B testing"
 #endif
+
+#elif defined(ARDUINO_ARCH_SAMD)
+#define PIN_TO_BASEREG(pin)            portModeRegister(digitalPinToPort(pin))
+#define PIN_TO_BITMASK(pin)            (digitalPinToBitMask(pin))
+#define IO_REG_TYPE uint32_t
+#define IO_REG_BASE_ATTR
+#define IO_REG_MASK_ATTR
+#define IO_REG_ASM
+#define DIRECT_READ(base, mask)        (((*((base) + 8)) & (mask)) ? 1 : 0)
+#define DIRECT_WRITE_LOW(base, mask)   ((*((base) + 5)) = (mask))
+#define DIRECT_WRITE_HIGH(base, mask)  ((*((base) + 6)) = (mask))
+#define DIRECT_MODE_INPUT(base, mask)  ((*((base) + 1)) = (mask))
+#define DIRECT_MODE_OUTPUT(base, mask) ((*((base) + 2)) = (mask))
 
 #elif defined(ARDUINO_ARCH_STM32)
 #define PIN_TO_BASEREG(pin)             (0)
