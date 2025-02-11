@@ -157,8 +157,8 @@ class E2B{
       static uint8_t checksum(const uint8_t *addr, uint8_t len);
     #endif
     #if E2B_HAMMING
-      byte* hammingEncode(byte* data, int length);
-      byte* hammingDecode(byte* encodedData);
+      uint8_t hammingEncode(uint8_t data)
+      uint8_t hammingDecode(uint8_t encodedData)
     #endif
     #if E2B_LPDC
       void ldpcEncode(byte* data, byte* encodedData, int blockSize, int numParityBits);

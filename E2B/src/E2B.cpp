@@ -777,7 +777,11 @@ void E2B::init(unsigned char rom[8]){
 	for (int i=0; i<7; i++)
     this->rom[i] = rom[i];
 	#if E2B_CRC
-  	this->rom[7] = crc8(this->rom, 7);
+		uint8_t romUINT[7];
+		for (int i=0; i<7; i++)
+			romUINT[i] = rom[i];
+		this->rom[7] = crc8(romUINT,7);
+		//this->rom[7] = crc8(this->rom,7);
 	#endif
 }
 
@@ -785,7 +789,11 @@ void E2B::setScratchpad(unsigned char scratchpad[9]){
   for (int i=0; i<8; i++)
     this->scratchpad[i] = scratchpad[i];
 	#if E2B_CRC
-  	this->scratchpad[8] = crc8(this->scratchpad, 8);
+		uint8_t scratchpadUINT[8];
+		for (int i=0; i<8; i++)
+	    scratchpadUINT[i] = scratchpad[i];
+  	this->scratchpad[8] = crc8(scratchpadUINT,8);
+		//this->scratchpad[8] = crc8(this->scratchpad,8);
 	#endif
 }
 
@@ -799,7 +807,11 @@ FuncPointerArray userFunc[256];
 void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
 	userFunc[num] = userFunction;
 	#if E2B_CRC
-		this->scratchpad[8] = crc8(this->scratchpad, 8);
+		uint8_t scratchpadUINT[8];
+		for (int i=0; i<8; i++)
+			scratchpadUINT[i] = scratchpad[i];
+		this->scratchpad[8] = crc8(scratchpadUINT,8);
+		//this->scratchpad[8] = crc8(this->scratchpad,8);
 	#endif
 }
 
@@ -1438,72 +1450,92 @@ uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
 #endif    //E2B_CHECKSUM
 
 #if E2B_HAMMING
-//Hamming Codes
+//Hamming Code Test Sketch
 /*NOTES:
 -This code demonstrates Hamming(7,4) encoding and decoding. You can modify it to suit your specific requirements.
 -This implementation assumes a single-bit error. For multiple-bit errors, consider using more advanced error-correcting codes.
+*//*
 
-/*Test sketch:
-void setup(){
+void setup() {
   Serial.begin(9600);
+  while(!Serial){}
+
+  uint8_t data = 0xA; // 1010 in binary
+  uint8_t encodedData = hamming74Encode(data);
+  uint8_t decodedData = hamming74Decode(encodedData);
+
+  Serial.print("Input Data: "); Serial.println(data,HEX);
+  Serial.print("Encoded Data: "); Serial.println(encodedData, BIN);
+  Serial.print("Decoded Data: "); Serial.println(decodedData,HEX);
 }
 
 void loop(){
-  // Example data to encode
-  byte data[] = {0b1011};
+}*/
 
-  // Encode data using Hamming(7,4)
-  byte encodedData[2] = hammingEncode(data, 1);
+//Hamming(7,4) Encoding Function
+uint8_t E2B::hammingEncode(uint8_t data){
+  // Ensure data is a 4-bit number (only the lower 4 bits of the input are used)
+  data &= 0x0F;
 
-  // Simulate transmission error (optional)
-  // encodedData[0] ^= 0b00000010; // Flip bit 1
-
-  // Decode received data
-  byte decodedData[2] = hammingDecode(encodedData);
-
-  Serial.print("Original Data: ");
-  Serial.println(data[0], BIN);
-  Serial.print("Encoded Data: ");
-  Serial.println(encodedData[0], BIN);
-  Serial.print("Decoded Data: ");
-  Serial.println(decodedData[0], BIN);
-
-  delay(1000);
-}
-*/
-
-// Hamming(7,4) Encoding Function
-byte* E2B::hammingEncode(byte* data, int length){
-  static byte encodedData[2];
-  byte p1, p2, p3;
-
-  for (int i = 0; i < length; i++){
-    p1 = ((data[i] >> 0) & 1) ^ ((data[i] >> 2) & 1) ^ ((data[i] >> 3) & 1);
-    p2 = ((data[i] >> 0) & 1) ^ ((data[i] >> 1) & 1) ^ ((data[i] >> 3) & 1);
-    p3 = ((data[i] >> 1) & 1) ^ ((data[i] >> 2) & 1) ^ ((data[i] >> 3) & 1);
-    encodedData[i] = (data[i] & 0x0F) | (p1 << 4) | (p2 << 5) | (p3 << 6);
+  //Returns 0 if not a 4-bit number
+  if(data < 8){
+    return 0;
   }
+
+  // Calculate the parity bits
+  bool p1 = (data >> 3 & 1) ^ (data >> 2 & 1) ^ (data & 1); // p1: d1, d2, d4
+  bool p2 = (data >> 3 & 1) ^ (data >> 1 & 1) ^ (data & 1); // p2: d1, d3, d4
+  bool p3 = (data >> 2 & 1) ^ (data >> 1 & 1) ^ (data & 1); // p3: d2, d3, d4
+  bool d1 = bitRead(data,3);
+  bool d2 = bitRead(data,2);
+  bool d3 = bitRead(data,1);
+  bool d4 = bitRead(data,0);
+
+  // Create the 7-bit encoded value:
+  // p1 p2 d1 p3 d2 d3 d4
+  uint8_t encodedData = 0x00;
+  bitWrite(encodedData,0,p1); bitWrite(encodedData,1,p2); bitWrite(encodedData,2,d1); bitWrite(encodedData,3,p3);
+  bitWrite(encodedData,4,d2); bitWrite(encodedData,5,d3); bitWrite(encodedData,6,d4); bitWrite(encodedData,7,0);
+
   return encodedData;
 }
 
-// Hamming(7,4) Decoding Function
-byte* E2B::hammingDecode(byte* encodedData){
-  static byte decodedData[2];
-  byte s1, s2, s3, error;
+//Hamming(7,4) Decoding Function
+uint8_t E2B::hammingDecode(uint8_t encodedData){
+    bool p1 = bitRead(encodedData,6);
+    bool p2 = bitRead(encodedData,5);
+    bool d1 = bitRead(encodedData,4);
+    bool p3 = bitRead(encodedData,3);
+    bool d2 = bitRead(encodedData,2);
+    bool d3 = bitRead(encodedData,1);
+    bool d4 = bitRead(encodedData,0);
 
-  for (int i = 0; i < 1; i++){
-    s1 = ((encodedData[i] >> 0) & 1) ^ ((encodedData[i] >> 2) & 1) ^ ((encodedData[i] >> 4) & 1) ^ ((encodedData[i] >> 6) & 1);
-    s2 = ((encodedData[i] >> 1) & 1) ^ ((encodedData[i] >> 2) & 1) ^ ((encodedData[i] >> 5) & 1) ^ ((encodedData[i] >> 6) & 1);
-    s3 = ((encodedData[i] >> 3) & 1) ^ ((encodedData[i] >> 4) & 1) ^ ((encodedData[i] >> 5) & 1) ^ ((encodedData[i] >> 6) & 1);
-    error = (s1 << 0) | (s2 << 1) | (s3 << 2);
+    // Calculate parity check bits
+    bool c1 = (d1 ^ d2 ^ d4) ^ p1; // Check parity 1
+    bool c2 = (d1 ^ d3 ^ d4) ^ p2; // Check parity 2
+    bool c3 = (d2 ^ d3 ^ d4) ^ p3; // Check parity 3
 
-    // Correct single-bit error
-    if (error != 0){
-      encodedData[i] ^= (1 << (error - 1));
+    // Determine the error position (if any)
+    uint8_t errorPos = c1 * 1 + c2 * 2 + c3 * 4;
+
+    // If errorPos is non-zero, there's an error at that bit position
+    if (errorPos) {
+        // Correct the error by flipping the bit at errorPos
+        encodedData ^= (1 << (7 - errorPos));  // Flip the bit at the error position
     }
-    decodedData[i] = encodedData[i] & 0x0F;
-  }
-  return decodedData;
+
+    // Extract the corrected data bits (d1, d2, d3, d4)
+    /*uint8_t correctedData = ((encodedData >> 3) & 1) << 3 |  // d1
+                            ((encodedData >> 2) & 1) << 2 |  // d2
+                            ((encodedData >> 1) & 1) << 1 |  // d3
+                            (encodedData & 1);               // d4*/
+    uint8_t correctedData = 0x00;
+    bitWrite(correctedData,0,(encodedData >> 3) & 1);
+    bitWrite(correctedData,1,(encodedData >> 2) & 1);
+    bitWrite(correctedData,2,(encodedData >> 1) & 1);
+    bitWrite(correctedData,3,(encodedData & 1));
+
+    return correctedData;
 }
 
 #endif    //E2B_HAMMING
