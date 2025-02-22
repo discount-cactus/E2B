@@ -38,14 +38,9 @@
 #define E2B_CONVOLUTION 0
 #endif
 
-// you can exclude E2B Parity bits by defining this to 0, defaulted to 0
-#if E2B_PARITY
-#define E2B_PARITY 0
-#endif
-
-// you can exclude E2B Aurora encoding/decoding by defining this to 0, defaulted to 0
-#ifndef E2B_AURORA
-#define E2B_AURORA 0
-#endif
+// you manually define the CPU frequency here for boards that do not automatically define F_CPU
+//#ifndef F_CPU
+#define F_CPU_AUX 480000000
+//#endif
 
 #endif // E2B_Config_h

@@ -1,91 +1,19 @@
 /*
-Copyright (c) 2007, Jim Studt  (original old version - many contributors since)
+This library began as a branch from Paul Stoffregen's OneWire v2.3.8 library and
+Markus Lange's OneWireSlave v1.1 library to implement application-specific data
+transmission between my custom hardware both on-board and off-board and over
+time began to take shape as a pretty different beast all together.
 
-The latest version of this library may be found at:
-  http://www.pjrc.com/teensy/td_libs_E2B.html
+Credit is due to Paul Stoffregen, Tom Pollard, Josh Larios, Jim Studt,
+Robin James, Guillermo Lovato, Jason Dangel, Glenn Trewitt, Ken Butcher, Mark
+Tillotson, Bertrik Sikken, Scott Roberts, Roger Clark, Love Nystrom for their
+contributions to development of the OneWire library as well as Markus Lange,
+Alexander Gordeyev and Joshua Fuller for their contributions to development of
+the OneWireSlave library.
 
-OneWire has been maintained by Paul Stoffregen (paul@pjrc.com) since
-January 2010.
 
-DO NOT EMAIL for technical support, especially not for ESP chips!
-All project support questions must be posted on public forums
-relevant to the board or chips used.  If using Arduino, post on
-Arduino's forum.  If using ESP, post on the ESP community forums.
-There is ABSOLUTELY NO TECH SUPPORT BY PRIVATE EMAIL!
 
-Github's issue tracker for OneWire should be used only to report
-specific bugs.  DO NOT request project support via Github.  All
-project and tech support questions must be posted on forums, not
-github issues.  If you experience a problem and you are not
-absolutely sure it's an issue with the library, ask on a forum
-first.  Only use github to report issues after experts have
-confirmed the issue is with OneWire rather than your project.
-
-Back in 2010, OneWire was in need of many bug fixes, but had
-been abandoned the original author (Jim Studt).  None of the known
-contributors were interested in maintaining OneWire.  Paul typically
-works on OneWire every 6 to 12 months.  Patches usually wait that
-long.  If anyone is interested in more actively maintaining OneWire,
-please contact Paul (this is pretty much the only reason to use
-private email about OneWire).
-
-OneWire is now very mature code.  No changes other than adding
-definitions for newer hardware support are anticipated.
-
-Version 2.3:
-  Unknown chip fallback mode, Roger Clark
-  Teensy-LC compatibility, Paul Stoffregen
-  Search bug fix, Love Nystrom
-
-Version 2.2:
-  Teensy 3.0 compatibility, Paul Stoffregen, paul@pjrc.com
-  Arduino Due compatibility, http://arduino.cc/forum/index.php?topic=141030
-  Fix DS18B20 example negative temperature
-  Fix DS18B20 example's low res modes, Ken Butcher
-  Improve reset timing, Mark Tillotson
-  Add const qualifiers, Bertrik Sikken
-  Add initial value input to crc16, Bertrik Sikken
-  Add target_search() function, Scott Roberts
-
-Version 2.1:
-  Arduino 1.0 compatibility, Paul Stoffregen
-  Improve temperature example, Paul Stoffregen
-  DS250x_PROM example, Guillermo Lovato
-  PIC32 (chipKit) compatibility, Jason Dangel, dangel.jason AT gmail.com
-  Improvements from Glenn Trewitt:
-  - crc16() now works
-  - check_crc16() does all of calculation/checking work.
-  - Added read_bytes() and write_bytes(), to reduce tedious loops.
-  - Added ds2408 example.
-  Delete very old, out-of-date readme file (info is here)
-
-Version 2.0: Modifications by Paul Stoffregen, January 2010:
-http://www.pjrc.com/teensy/td_libs_E2B.html
-  Search fix from Robin James
-    http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1238032295/27#27
-  Use direct optimized I/O in all cases
-  Disable interrupts during timing critical sections
-    (this solves many random communication errors)
-  Disable interrupts during read-modify-write I/O
-  Reduce RAM consumption by eliminating unnecessary
-    variables and trimming many to 8 bits
-  Optimize both crc8 - table version moved to flash
-
-Modified to work with larger numbers of devices - avoids loop.
-Tested in Arduino 11 alpha with 12 sensors.
-26 Sept 2008 -- Robin James
-http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1238032295/27#27
-
-Updated to work with arduino-0008 and to include skip() as of
-2007/07/06. --RJL20
-
-Modified to calculate the 8-bit CRC directly, avoiding the need for
-the 256-byte lookup table to be loaded in RAM.  Tested in arduino-0010
--- Tom Pollard, Jan 23, 2008
-
-Jim Studt's original library was modified by Josh Larios.
-
-Tom Pollard, pollard@alum.mit.edu, contributed around May 20, 2008
+It is based on Jim's Studt OneWire library v2.0
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -139,67 +67,6 @@ sample code bearing this copyright.
 //--------------------------------------------------------------------------
 */
 
-
-
-/*
-OneWireSlave v1.1 by Joshua Fuller - Modified based on versions noted below for Digispark
-
-OneWireSlave v1.0 by Alexander Gordeyev
-
-It is based on Jim's Studt OneWire library v2.0
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-Much of the code was inspired by Derek Yerger's code, though I don't
-think much of that remains.  In any event that was..
-    (copyleft) 2006 by Derek Yerger - Free to distribute freely.
-
-The CRC code was excerpted and inspired by the Dallas Semiconductor
-sample code bearing this copyright.
-//---------------------------------------------------------------------------
-// Copyright (C) 2000 Dallas Semiconductor Corporation, All Rights Reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY,  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-// IN NO EVENT SHALL DALLAS SEMICONDUCTOR BE LIABLE FOR ANY CLAIM, DAMAGES
-// OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-// ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-// OTHER DEALINGS IN THE SOFTWARE.
-//
-// Except as contained in this notice, the name of Dallas Semiconductor
-// shall not be used except as stated in the Dallas Semiconductor
-// Branding Policy.
-//---------------------------------------------------------------------------
-*/
-
 #include <Arduino.h>
 #include "E2B.h"
 #include "util/E2B_direct_gpio.h"
@@ -218,6 +85,7 @@ sample code bearing this copyright.
 
 uint8_t _pin;
 
+//Initializes the E2B port
 void E2B::begin(uint8_t pin){
 	_pin = pin;
 	pinMode(_pin, INPUT);
@@ -291,6 +159,29 @@ void E2B::generateROM(unsigned char *newAddr){
   for (int i=1; i < 8; i++) newAddr[i] = random(256);
 }
 
+//Waits for devices to stop talking to transmit data. Primarily used for buses with multiple master devices
+bool E2B::waitToTransmit(void){
+	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
+	uint8_t trueCount = 0;
+	uint8_t loopCount = 0;						//Uses this as a limit so data is discarded if it has to wait too long to send
+	while((trueCount != 3) && (loopCount < 30)){
+		if(!DIRECT_READ(reg, mask)){
+			trueCount = 0;
+		}else{
+			trueCount++;
+		}
+		loopCount++;
+		delayMicroseconds(100);
+	}
+	if(loopCount >= 30){				//Returns FALSE if devices were talking for a long time. Set to greater than OR equal to to be a catch-all
+		return 0;
+	}else{											//Returns TRUE if trueCount equals 3 before the loop timeout
+		if(trueCount == 3){
+			return 1;
+		}
+	}
+}
 
 // Perform the E2B reset function.  We will wait up to 250uS for the bus to come high, if it doesn't then it is
 // broken or shorted and we return a 0. Returns 1 if a device asserted a presence pulse, 0 otherwise.
@@ -347,8 +238,7 @@ void E2B::write_bit(uint8_t v){
 	}
 }
 
-// Read a bit. Port and bit is used to cut lookup time and provide
-// more certain timing.
+// Reads a single bit. Port and bit is used to cut lookup time and provide more certain timing.
 uint8_t E2B::read_bit(void){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
@@ -366,11 +256,9 @@ uint8_t E2B::read_bit(void){
 	return r;
 }
 
-// Write a byte. The writing code uses the active drivers to raise the
-// pin high, if you need power after the write (e.g. DS18S20 in
-// parasite power mode) then set 'power' to 1, otherwise the pin will
-// go tri-state at the end of the write to avoid heating in a short or
-// other mishap.
+// Writes a byte of data.
+/*The writing code uses the active drivers to raise the pin high, if you need power after the write (e.g. DS18S20 inparasite power mode)
+then set 'power' to 1, otherwise the pin will go tri-state at the end of the write to avoid heating in a short or other mishap.*/
 void E2B::write(uint8_t v, uint8_t power /* = 0 */){
   uint8_t bitMask;
 
@@ -385,6 +273,7 @@ void E2B::write(uint8_t v, uint8_t power /* = 0 */){
   }
 }
 
+//Writes multiple bytes of data
 void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */){
   for (uint16_t i=0; i < count ; i++)
     write(buf[i]);
@@ -396,7 +285,7 @@ void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */){
   }
 }
 
-// Read a byte of data
+// Reads a byte of data
 uint8_t E2B::read(){
     uint8_t bitMask;
     uint8_t r = 0;
@@ -407,21 +296,32 @@ uint8_t E2B::read(){
     return r;
 }
 
+//Reads multiple bytes of data
 void E2B::read_bytes(uint8_t *buf, uint16_t count){
   for (uint16_t i = 0 ; i < count ; i++)
     buf[i] = read();
 }
 
-// Does a ROM select command (aka Choose ROM)
+//Performs a SELECT ROM (or CHOOSE ROM) command
 void E2B::select(const uint8_t rom[8]){
     write(0x55);
 
     for (uint8_t i = 0; i < 8; i++) write(rom[i]);
 }
 
-//Does a ROM skip command
+//Performs a SKIP ROM command
 void E2B::skip(){
     write(0xCC);
+}
+
+//Performs a READ SCRATCHPAD command
+void E2B::read_scratchpad(){
+    write(0xBE);
+}
+
+//Performs a WRITE SCRATCHPAD command
+void E2B::write_scratchpad(){
+    write(0x4E);
 }
 
 //Requests an unlock to a device with a secureFlag = 1.
@@ -431,6 +331,7 @@ void E2B::unlock(uint8_t key){
     write(key);
 }
 
+//Disables power to the E2B port
 void E2B::depower(){
 	noInterrupts();
 	DIRECT_MODE_INPUT(baseReg, bitmask);
@@ -438,24 +339,18 @@ void E2B::depower(){
 }
 
 #if E2B_SEARCH
-//
-// You need to use this function to start a search again from the beginning.
-// You do not need to do it for the first search, though you could.
-//
+//Resets the search state to the beginning. Always needed before a search, but optional on the first search
 void E2B::reset_search(){
-  // reset the search state
   LastDiscrepancy = 0;
   LastDeviceFlag = false;
   LastFamilyDiscrepancy = 0;
   for(int i = 7; ; i--){
     ROM_NO[i] = 0;
-    if ( i == 0) break;
+    if (i == 0) break;
   }
 }
 
-// Setup the search to find the device type 'family_code' on the next call
-// to search(*newAddr) if it is present.
-//
+//Sets up the search to find the device type 'family_code' on the next call to search(*newAddr) if it is present.
 void E2B::target_search(uint8_t family_code){
    // set the search state to find SearchFamily type devices
    ROM_NO[0] = family_code;
@@ -466,7 +361,6 @@ void E2B::target_search(uint8_t family_code){
    LastDeviceFlag = false;
 }
 
-//
 // Perform a search. If this function returns a '1' then it has
 // enumerated the next device and you may retrieve the ROM from the
 // E2B::address variable. If there are no devices, no further
@@ -481,7 +375,6 @@ void E2B::target_search(uint8_t family_code){
 // search state.
 // Return true  : device found, ROM number in ROM_NO buffer
 //        false : device not found, end of search
-//
 bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
    uint8_t id_bit_number;
    uint8_t last_zero, rom_byte_number;
@@ -597,7 +490,7 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
    return search_result;
 }
 
-// Performs an E2B search and logs the addresses to a struct.
+// Performs an E2B search and logs the addresses to a struct for later use.
 bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode /* = true */){
    uint8_t id_bit_number;
    uint8_t last_zero, rom_byte_number;
@@ -734,12 +627,13 @@ volatile long previous = 0;
 volatile long old_previous = 0;
 volatile long diff = 0;
 
+//Computes the pull-down time of the bus to determine if a pulse/bit is detected
 void E2B::MasterResetPulseDetection(){
   old_previous = previous;
   previous = micros();
   diff = previous - old_previous;
   if (diff >= lowmark && diff <= highmark){
-		Serial.println(diff);
+		//Serial.println(diff);
     waitForRequestInterrupt(false);
   }
 }
@@ -773,6 +667,7 @@ void E2B::MasterResetPulseDetection(){
 	recvAndProcessCmd();
 }*/
 
+//Initializes the E2B port for asynchronous receiving of data
 void E2B::init(unsigned char rom[8]){
 	for (int i=0; i<7; i++)
     this->rom[i] = rom[i];
@@ -785,6 +680,7 @@ void E2B::init(unsigned char rom[8]){
 	#endif
 }
 
+//Writes the input data to the scratchpad
 void E2B::setScratchpad(unsigned char scratchpad[9]){
   for (int i=0; i<8; i++)
     this->scratchpad[i] = scratchpad[i];
@@ -797,6 +693,7 @@ void E2B::setScratchpad(unsigned char scratchpad[9]){
 	#endif
 }
 
+//Sets the power of the E2B port
 void E2B::setPower(uint8_t power){
   this->power = power;
 }
@@ -833,6 +730,7 @@ void E2B::attachB8h(void (*userFunctionB8h)(void)){
 	userB8hFunc = userFunctionB8h;
 }*/
 
+//Synchronously waits for data to be received
 bool E2B::waitForRequest(bool ignore_errors){
   errnum = E2B_NO_ERROR;
 
@@ -863,7 +761,7 @@ bool E2B::waitForRequest(bool ignore_errors){
   }
 }
 
-//Interrupt-driven variant of waitForRequest()
+//Interrupt-driven variant of waitForRequest(). Asynchronously waits for data to be reeceived. Triggered by MasterResetPulseDetection()
 bool E2B::waitForRequestInterrupt(bool ignore_errors){
   errnum = E2B_NO_ERROR;
   //owsprint();
@@ -887,6 +785,7 @@ bool E2B::waitForRequestInterrupt(bool ignore_errors){
   }
 }
 
+//Receives a command and processes follow-up commands
 bool E2B::recvAndProcessCmd(){
 	char addr[8];
   uint16_t raw = 0;
@@ -952,9 +851,13 @@ bool E2B::recvAndProcessCmd(){
   }*/
 }
 
+//Processes a follow-up command
 bool E2B::duty(){
 	uint8_t done = recv_async();
-  scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
+	if(FAMILYCODE != FAMILYCODE_TRANSCEIVER){
+  	scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
+	}
+	//Serial.print("done: "); Serial.println(done,HEX);
 
 
   if ((secureFlag == 1) && (isLocked == 1) && (done != 0x3A)){
@@ -966,7 +869,7 @@ bool E2B::duty(){
     isLocked = 1;
   }*/
 
-  switch (done){
+  switch(done){
     case 0xBE: // READ SCREATCHPAD
 			sendData_async(scratchpad, 9);
 			if (errnum != E2B_NO_ERROR)
@@ -989,6 +892,11 @@ bool E2B::duty(){
   				return false;
 			}
       break;
+		case 0x4E: // WRITE SCREATCHPAD
+			recvData_async(scratchpad,8);
+			if (errnum != E2B_NO_ERROR)
+				return false;
+			break;
 		/*case 0x44: // CONVERT SENSOR
 			userFunc[0x44];                       //originally user44hFunc();
 			if (errnum != E2B_NO_ERROR)
@@ -1001,12 +909,6 @@ bool E2B::duty(){
 			break;
 		case 0xB8: // CONVERT SENSOR
 			userFunc[0xB8];                       //originally userB8hFunc();
-			if (errnum != E2B_NO_ERROR)
-				return false;
-			break;*/
-		/*case 0x4E: // WRITE SCREATCHPAD
-			recvData_async(temp_scratchpad, 3);
-			setScratchpad_external(temp_scratchpad);
 			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;*/
@@ -1044,6 +946,7 @@ bool E2B::searchROM(){
   return true;
 }
 
+//Waits for a reset pulse
 bool E2B::waitReset(uint16_t timeout_ms){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
@@ -1104,6 +1007,7 @@ bool E2B::waitReset(uint16_t timeout_ms){
   return waitReset(1000);
 }*/
 
+//Waits for the precense pulse
 bool E2B::presence(uint8_t delta){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
@@ -1170,6 +1074,7 @@ bool E2B::presence(){
   return presence(25);
 }
 
+//Asynchronously sends multiple bytes of data
 uint8_t E2B::sendData_async(char buf[], uint8_t len){
   uint8_t bytes_sent = 0;
 
@@ -1182,6 +1087,7 @@ uint8_t E2B::sendData_async(char buf[], uint8_t len){
   return bytes_sent;
 }
 
+//Asynchronously reads multiple bytes of data
 uint8_t E2B::recvData_async(char buf[], uint8_t len){
   uint8_t bytes_received = 0;
 
@@ -1194,12 +1100,14 @@ uint8_t E2B::recvData_async(char buf[], uint8_t len){
   return bytes_received;
 }
 
+//Asynchronously sends a byte of data
 void E2B::send_async(uint8_t v){
   errnum = E2B_NO_ERROR;
   for (uint8_t bitmask = 0x01; bitmask && (errnum == E2B_NO_ERROR); bitmask <<= 1)
   	send_bit_async((bitmask & v)?1:0);
 }
 
+//Asynchronously reads a byte of data
 uint8_t E2B::recv_async(){
   uint8_t r = 0;
 
@@ -1210,6 +1118,7 @@ uint8_t E2B::recv_async(){
   return r;
 }
 
+//Asynchronously sends a bit of data
 void E2B::send_bit_async(uint8_t v){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
@@ -1241,6 +1150,7 @@ void E2B::send_bit_async(uint8_t v){
   return;
 }
 
+//Asynchronously reads a bit of data
 uint8_t E2B::recv_bit_async(void){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
@@ -1361,8 +1271,7 @@ uint8_t E2B::waitTimeSlotRead(){
 
 #if E2B_CRC
 //Computes a Dallas Semiconductor 8-bit CRC directly.
-//The 1-Wire CRC scheme is described in Maxim Application Note 27:
-//"Understanding and Using Cyclic Redundancy Checks with Maxim iButton Products"
+//The 1-Wire CRC scheme is described in Maxim Application Note 27: "Understanding and Using Cyclic Redundancy Checks with Maxim iButton Products"
 uint8_t E2B::crc8(const uint8_t *addr, uint8_t len){
 	uint8_t crc = 0;
 
@@ -1440,7 +1349,7 @@ uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
 #endif    //E2B_CRC
 
 #if E2B_CHECKSUM
-// Computes a standard XOR checksum
+//Computes a standard XOR checksum
 uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
   uint8_t checksum = 0;
   for (int i=0; i < len; i++) checksum ^= addr[i];
@@ -1541,119 +1450,78 @@ uint8_t E2B::hammingDecode(uint8_t encodedData){
 #endif    //E2B_HAMMING
 
 #if E2B_LPDC
-//Low-Density Parity Check FAMILYCODE_HOST
-/*NOTES:
--This is a simplified example using a regular LDPC code with a small block size. In practice, larger block sizes and more complex codes are used.
--This implementation demonstrates basic LDPC encoding and decoding using the Belief Propagation Algorithm.
--Keep in mind that this is a simplified example and may not provide optimal error-correcting performance. For more robust error correction, consider using larger block sizes, more complex codes, and optimized decoding algorithms.
-
-Test sketch:
-const int blockSize = 8;
-const int numParityBits = 4;
-const int numIterations = 5;
-
-byte data[blockSize] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF};
-byte encodedData[blockSize + numParityBits];
-byte receivedData[blockSize + numParityBits];
-byte decodedData[blockSize];
-
-void setup(){
+//Low-Density Parity Code Test Sketch
+/*void setup(){
   Serial.begin(9600);
 
-  // Encode data
-  ldpcEncode(data, encodedData, blockSize, numParityBits);
+  byte originalData = 0xC7; // Example 8-bit data
 
-  // Simulate transmission error (optional)
-  // receivedData[3] ^= 0x01;
+  uint16_t encodedData = encodeLDPC(originalData);
+  byte decodedData = decodeLDPC(encodedData);
 
-  // Copy encoded data to received data
-  for (int i = 0; i < blockSize + numParityBits; i++){
-    receivedData[i] = encodedData[i];
-  }
-
-  // Decode received data
-  ldpcDecode(receivedData, decodedData, blockSize, numParityBits, numIterations);
-
-  Serial.print("Original Data: ");
-  for (int i = 0; i < blockSize; i++){
-    Serial.print(data[i], HEX);
-  }
-  Serial.println();
-
-  Serial.print("Decoded Data: ");
-  for (int i = 0; i < blockSize; i++){
-    Serial.print(decodedData[i], HEX);
-  }
-  Serial.println();
+  Serial.println("LDPC Encoding and Decoding Example:");
+  Serial.print("Original Data: "); Serial.println(originalData, HEX);
+  Serial.print("Encoded Data: "); Serial.println(encodedData, BIN);
+  Serial.print("Decoded Data: "); Serial.println(decodedData, HEX);
 }
 
 void loop(){
+}*/
+
+// Function to encode a byte using LDPC
+uint16_t E2B::encodeLDPC(byte data){
+  const int n = 8; // Number of data bits
+  const int m = 12; // Number of total bits (including parity)
+  const int parityCheckMatrix[m - n][n] = {
+    {1, 1, 0, 0, 1, 0, 1, 1},  // Example LDPC parity-check matrix (4x8)
+    {0, 1, 1, 0, 1, 1, 1, 0},
+    {1, 0, 1, 1, 0, 1, 1, 0},
+    {1, 1, 1, 0, 1, 1, 0, 0}
+  };
+  uint16_t encodedData = 0;
+
+  // Store the original data bits in the first part of the encoded byte
+  for (int i=0; i < n; i++){
+    bitWrite(encodedData,i,bitRead(data,i));
+  }
+
+  // Calculate the parity bits and append them to the encoded byte
+  for (int i=0; i < m - n; i++){
+    bool parityBit = 0;
+    for (int j=0; j < n; j++){
+      parityBit += bitRead(data,i) * parityCheckMatrix[i][j];
+    }
+    // Place the parity bits in the remaining positions in encodedData
+    encodedData |= (parityBit << (n + i));
+  }
+
+  return encodedData;
 }
-*/
-//LDPC Encoding Function:
-void E2B::ldpcEncode(byte* data, byte* encodedData, int blockSize, int numParityBits){
-  int i, j;
-  byte temp;
 
-  // Initialize encoded data with data bits
-  for (i = 0; i < blockSize; i++){
-    encodedData[i] = data[i];
-  }
+// Function to decode a byte using LDPC
+byte E2B::decodeLDPC(uint16_t encodedData){
+  const int n = 8; // Number of data bits
+  const int m = 12; // Number of total bits (including parity)
+  const int parityCheckMatrix[m - n][n] = {
+    {1, 1, 0, 0, 1, 0, 1, 1},  // Example LDPC parity-check matrix (4x8)
+    {0, 1, 1, 0, 1, 1, 1, 0},
+    {1, 0, 1, 1, 0, 1, 1, 0},
+    {1, 1, 1, 0, 1, 1, 0, 0}
+  };
+  byte decodedData = 0;
 
-  // Calculate parity bits
-  for (i = 0; i < numParityBits; i++){
-    temp = 0;
-    for (j = 0; j < blockSize; j++){
-      temp ^= (encodedData[j] & (1 << i)) ? 1 : 0;
-    }
-    encodedData[blockSize + i] = temp;
-  }
-}
-
-//LDPC Decoding Function (Belief Propagation Algorithm):
-void E2B::ldpcDecode(byte* receivedData, byte* decodedData, int blockSize, int numParityBits, int numIterations){
-  int i, j, k;
-  byte syndrome[numParityBits];
-  byte temp;
-
-  // Initialize syndrome
-  for (i = 0; i < numParityBits; i++){
-    syndrome[i] = 0;
-  }
-
-  // Calculate syndrome
-  for (i = 0; i < numParityBits; i++){
-    temp = 0;
-    for (j = 0; j < blockSize; j++){
-      temp ^= (receivedData[j] & (1 << i)) ? 1 : 0;
-    }
-    syndrome[i] = temp ^ receivedData[blockSize + i];
-  }
-
-  // Iterative decoding
-  for (k = 0; k < numIterations; k++){
-    for (i = 0; i < blockSize; i++){
-      temp = receivedData[i];
-      for (j = 0; j < numParityBits; j++){
-        temp ^= (syndrome[j] & (1 << i)) ? 1 : 0;
-      }
-      receivedData[i] = temp;
+  // Example hard-decision decoding (simplified)
+  for (int i=0; i < n; i++){
+    bool parityBit = 0;
+    for (int j=0; j < m - n; j++){
+      parityBit += bitRead(encodedData,i) * parityCheckMatrix[j][i];
     }
 
-    // Update syndrome
-    for (i = 0; i < numParityBits; i++){
-      temp = 0;
-      for (j = 0; j < blockSize; j++){
-        temp ^= (receivedData[j] & (1 << i)) ? 1 : 0;
-      }
-      syndrome[i] = temp ^ receivedData[blockSize + i];
-    }
+    // If parity check fails (parityBit is 1), we flip the corresponding data bit
+    bitWrite(decodedData,i,parityBit);
   }
 
-  // Copy decoded data
-  for (i = 0; i < blockSize; i++){
-    decodedData[i] = receivedData[i];
-  }
+  return decodedData;
 }
 
 #endif        //E2B_LPDC
@@ -1774,382 +1642,3 @@ void E2B::convolutionalDecode(byte* receivedData, byte* decodedData, int dataLen
 }
 
 #endif        //E2B_CONVOLUTION
-
-#if E2B_PARITY
-//Parity bit
-/*NOTES:
--Parity bits are a simple and effective way to detect errors in digital communication. Here's a brief summary:
--Parity Bit Implementation:
-1. Choose even or odd parity.
-2. Calculate the parity bit for each data byte.
-3. Append the parity bit to the data byte.
-4. Transmit the data byte with parity.
-5. Receiver checks parity to detect errors.
-
--Even Parity Example:
-Data Byte: 10101010
-Parity Bit: 0 (since there are an even number of 1s)
-Transmitted Byte: 101010100
-
--Odd Parity Example:
-Data Byte: 10101010
-Parity Bit: 1 (since there are an even number of 1s)
-Transmitted Byte: 101010101
-
--Advantages:
-1. Simple to implement in hardware and software.
-2. Low overhead (only 1 extra bit per byte).
-3. Effective for detecting single-bit errors.
-
--Disadvantages:
-1. Cannot detect multiple-bit errors.
-2. Cannot correct errors.
-*/
-void E2B::sendByte(byte data){
-  byte parity = calculateParity(data);
-  Serial.write(data);
-  Serial.write(parity);
-}
-
-byte E2B::calculateParity(byte data){
-  byte parity = 0;
-  for (int i = 0; i < 8; i++){
-    parity ^= (data >> i) & 1;
-  }
-  return parity;
-}
-
-void E2B::receiveByte(){
-  byte data = Serial.read();
-  byte parity = Serial.read();
-  byte calculatedParity = calculateParity(data);
-  if (parity != calculatedParity){
-    // Error detected!
-  }
-}
-
-#endif        //E2B_PARITY
-
-#if E2B_AURORA
-/*NOTES:
-Overview: Aurora combines techniques from existing codes, adding novel elements for enhanced error detection and correction.
-
-Components:
-1. Data Fragmentation: Divide data into smaller fragments (e.g., 128 bytes)
-2.  Cyclic Redundancy Check (CRC): Calculate CRC-32 for each fragment
-3.  Error-Correcting Codes (ECC): Apply a simplified Reed-Solomon code (RS(255,239)) for fragment-level error correction
-4.  Checksum Tree: Construct a binary tree of checksums (e.g., Adler-32) for rapid error detection
-5.  Digital Signature: Append a digital signature (e.g., ECDSA) for authenticity and integrity
-
-Novel Elements:
-1.  Fragment Interleaving: Interleave fragments to minimize consecutive error occurrences
-2.  Error Propagation Detection: Embed special "sentinel" bytes to detect error propagation
-
-Operation:
-1.  Sender:
-    - Fragment data
-    - Calculate CRC and ECC for each fragment
-    - Construct checksum tree
-    - Append digital signature
-    - Interleave fragments
-2.  Receiver:
-    - Verify digital signature
-    - Check checksum tree for errors
-    - Correct errors using ECC and CRC
-    - Detect error propagation using sentinel bytes
-
-Advantages:
-1.  Robust error detection and correction
-2.  Efficient computation and low overhead
-3.  Scalability for various data sizes and structures
-4.  Enhanced security features
-
-Challenges:
-1.  Balancing complexity and performance
-2.  Optimizing parameter choices (fragment size, CRC/ECC strength)
-3.  Ensuring compatibility with diverse communication protocols
-
-
-
-- This implementation assumes the encoded data is valid and follows the Aurora format.
-- Error handling is simplified for demonstration purposes.
-
-To use this example:
-1. Copy the auroraEncode and auroraDecode functions into your Arduino sketch.
-2. Define the data, encodedData, and decodedData buffers.
-3. Initialize the data buffer with your original data.
-4. Call auroraEncode to encode the data.
-5. Simulate transmission errors (optional).
-6. Call auroraDecode to decode the data.
-7. Verify the decoded data matches the original data.
-
-- This example assumes a simple Arduino sketch. You may need to adapt it to your specific project.
-- The auroraEncode and auroraDecode functions require the helper functions (calculateCrc32, calculateEcc, etc.) to be implemented.
-- You can modify the dataSize and encodedSize constants to suit your specific requirements.
-
-
-
-Error Handling:
--The decoder function currently prints error messages to the serial console if:
- 1. Digital signature verification fails.
- 2. Checksum mismatch occurs.
- 3. Error correction fails.
-
-You may want to modify the error handling to suit your specific requirements, such as:
- 1. Returning an error code.
- 2. Setting a flag.
- 3. Restarting the decoding process.
-
-
-Decoder Optimization:
--To improve performance:
- 1. Use lookup tables for CRC and checksum calculations.
- 2. Optimize ECC correction using more efficient algorithms.
- 3. Use parallel processing or pipelining for fragment decoding.
-
-Security Considerations:
- 1. Ensure the ECDSA signature verification is secure.
- 2. Use a secure random number generator for key generation.
- 3. Protect against side-channel attacks.
-
-Fragment Size:
--The fragment size (128 bytes) can be adjusted based on:
- 1. Data transmission packet size.
- 2. Error correction capabilities.
- 3. Computational resources.
-
-Code Organization:
--Consider separating the decoder function into smaller modules:
- 1. De-interleaving.
- 2. Signature verification.
- 3. Checksum checking.
- 4. Error correction.
-
-This will improve code readability and maintainability.
-
-Test sketch:
-// Define constants
-const int dataSize = 1024; // Original data size
-const int encodedSize = dataSize + 128 + 64; // Encoded data size (Aurora overhead)
-
-// Define data buffers
-byte data[dataSize];
-byte encodedData[encodedSize];
-byte decodedData[dataSize];
-
-
-
-void setup(){
-  Serial.begin(9600);
-
-  //Initialize data
-  for (int i=0; i < dataSize; i++){
-    data[i] = random(256); // Fill with random data
-  }
-
-  auroraEncode(data, dataSize, encodedData);              //Encode data
-
-  auroraDecode(encodedData, encodedSize, decodedData);    //Decode data
-
-  // Verify decoded data
-  bool match = true;
-  for (int i = 0; i < dataSize; i++){
-    if (data[i] != decodedData[i]){
-      match = false;
-      break;
-    }
-  }
-
-  if (match){
-    Serial.println("Decoded data matches original data");
-  } else {
-    Serial.println("Error: Decoded data does not match original data");
-  }
-}
-
-void loop(){
-}
-*/
-uint32_t E2B::calculateCrc32(byte* data, int size){
-  uint32_t crc = 0xFFFFFFFF;
-  for (int i = 0; i < size; i++){
-    crc = crc ^ data[i];
-    for (int j = 0; j < 8; j++){
-      if (crc & 1){
-        crc = (crc >> 1) ^ 0xEDB88320;
-      } else {
-        crc = crc >> 1;
-      }
-    }
-  }
-  return crc ^ 0xFFFFFFFF;
-}
-
-void E2B::calculateEcc(byte* data, int size, byte* ecc){
-  // Simplified Reed-Solomon code implementation
-  // This is a basic example and may not provide optimal error correction
-  for (int i = 0; i < 16; i++){
-    ecc[i] = 0;
-    for (int j = 0; j < size; j++){
-      ecc[i] ^= data[j];
-    }
-  }
-}
-
-uint32_t E2B::calculateChecksum(byte* data, int size){
-  uint32_t checksum = 0;
-  for (int i = 0; i < size; i++){
-    checksum += data[i];
-  }
-  return checksum;
-}
-
-void E2B::calculateSignature(byte* data, int size, byte* signature){
-  // ECDSA signature implementation
-  // This is a basic example and may not provide optimal security
-  for (int i = 0; i < 64; i++){
-    signature[i] = 0;
-    for (int j = 0; j < size; j++){
-      signature[i] ^= data[j];
-    }
-  }
-}
-
-bool E2B::verifySignature(byte* data, int size, byte* signature){
-  byte calculatedSignature[64];
-  calculateSignature(data, size, calculatedSignature);
-  for (int i = 0; i < 64; i++){
-    if (calculatedSignature[i] != signature[i]){
-      return false;
-    }
-  }
-  return true;
-}
-
-void E2B::correctErrors(byte* data, int size, byte* ecc, byte* crc){
-  // ECC and CRC correction implementation
-  // This is a basic example and may not provide optimal error correction
-  uint32_t calculatedCrc = calculateCrc32(data, size);
-  if (calculatedCrc != *(uint32_t*)crc){
-    // Error detected, attempt correction
-    for (int i = 0; i < size; i++){
-      data[i] ^= ecc[i];
-    }
-  }
-}
-
-void E2B::interleaveFragments(byte* encodedData, int numFragments, int fragmentSize){
-  // Fragment interleaving implementation
-  byte temp[fragmentSize];
-  for (int i = 0; i < numFragments; i++){
-    for (int j = 0; j < fragmentSize; j++){
-      temp[j] = encodedData[i * fragmentSize + j];
-    }
-    for (int j = 0; j < fragmentSize; j++){
-      encodedData[i * fragmentSize + j] = temp[(i + j) % fragmentSize];
-    }
-  }
-}
-
-void E2B::deinterleaveFragments(byte* encodedData, int numFragments, int fragmentSize){
-  // Fragment de-interleaving implementation
-  byte temp[fragmentSize];
-  for (int i = 0; i < numFragments; i++){
-    for (int j = 0; j < fragmentSize; j++){
-      temp[(i + j) % fragmentSize] = encodedData[i * fragmentSize + j];
-    }
-    for (int j = 0; j < fragmentSize; j++){
-      encodedData[i * fragmentSize + j] = temp[j];
-    }
-  }
-}
-
-void E2B::auroraEncode(byte* data, int dataSize, byte* encodedData){
-  int fragmentSize = 128;
-  int numFragments = (dataSize + fragmentSize - 1) / fragmentSize;
-  int crcSize = 4; // CRC-32
-  int eccSize = 16; // Simplified Reed-Solomon code
-  int checksumSize = 4; // Adler-32
-  int signatureSize = 64; // ECDSA signature
-
-  // Fragment data
-  /*for (int i = 0; i < numFragments; i++){
-    int fragmentStart = i * fragmentSize;
-  }*/
-
-  // Fragment data
-  for (int i = 0; i < numFragments; i++){
-    int fragmentStart = i * fragmentSize;
-    int fragmentEnd = min(fragmentStart + fragmentSize, dataSize);
-
-    // Calculate CRC-32
-    uint32_t crc = calculateCrc32(&data[fragmentStart], fragmentEnd - fragmentStart);
-    memcpy(&encodedData[fragmentStart + crcSize * i], &crc, crcSize);
-
-    // Apply simplified Reed-Solomon code
-    byte ecc[eccSize];
-    calculateEcc(&data[fragmentStart], fragmentEnd - fragmentStart, ecc);
-    memcpy(&encodedData[fragmentStart + crcSize * i + eccSize], ecc, eccSize);
-
-    // Calculate checksum (Adler-32)
-    uint32_t checksum = calculateChecksum(&data[fragmentStart], fragmentEnd - fragmentStart);
-    memcpy(&encodedData[fragmentStart + crcSize * i + eccSize + checksumSize * i], &checksum, checksumSize);
-  }
-
-  // Append digital signature (ECDSA)
-  byte signature[signatureSize];
-  calculateSignature(data, dataSize, signature);
-  memcpy(&encodedData[numFragments * fragmentSize], signature, signatureSize);
-
-  // Interleave fragments
-  interleaveFragments(encodedData, numFragments, fragmentSize);
-}
-
-/*This decoder function:
-1. De-interleaves fragments.
-2. Verifies the digital signature.
-3. Checks the checksum.
-4. Corrects errors using ECC and CRC.
-5. Copies the decoded fragment to the output buffer.
-
-To use this function:
-1. Call auroraDecode with the encoded data, encoded size, and decoded data buffer.
-2. Verify the decoded data matches the original data.*/
-void E2B::auroraDecode(byte* encodedData, int encodedSize, byte* decodedData){
-  int fragmentSize = 128;
-  int numFragments = (encodedSize - 64) / (fragmentSize + 4 + 16 + 4); // minus signature size
-
-  // De-interleave fragments
-  deinterleaveFragments(encodedData, numFragments, fragmentSize);
-
-  for (int i = 0; i < numFragments; i++){
-    int fragmentStart = i * fragmentSize;
-
-    // Verify digital signature (ECDSA)
-    if (!verifySignature(&encodedData[fragmentStart], fragmentSize, &encodedData[encodedSize - 64])){
-      // Error: signature mismatch
-      Serial.println("Error: Signature mismatch");
-      return;
-    }
-
-    // Check checksum (Adler-32)
-    uint32_t checksum = calculateChecksum(&encodedData[fragmentStart], fragmentSize);
-    if (checksum != *(uint32_t*)&encodedData[fragmentStart + fragmentSize + 4 * i]){
-      // Error: checksum mismatch
-      Serial.println("Error: Checksum mismatch");
-      return;
-    }
-
-    // Correct errors using ECC and CRC
-    byte ecc[16];
-    memcpy(ecc, &encodedData[fragmentStart + 4], 16);
-    byte crc[4];
-    memcpy(crc, &encodedData[fragmentStart], 4);
-    correctErrors(&encodedData[fragmentStart], fragmentSize, ecc, crc);
-
-    // Copy decoded fragment
-    memcpy(&decodedData[fragmentStart], &encodedData[fragmentStart], fragmentSize);
-  }
-}
-
-#endif    //E2B_AURORA

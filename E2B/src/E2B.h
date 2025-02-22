@@ -97,9 +97,12 @@ class E2B{
     void setSecureFlag(uint8_t level, uint8_t key = 0);
     bool getSecureFlag();
     void generateROM(unsigned char *newAddr);
+    bool waitToTransmit(void);
     uint8_t reset(void);
     void select(const uint8_t rom[8]);
     void skip(void);
+    void read_scratchpad(void);
+    void write_scratchpad(void);
     void unlock(uint8_t key);
     void write(uint8_t v, uint8_t power = 0);
     void write_bytes(const uint8_t *buf, uint16_t count, bool power = 0);
@@ -157,33 +160,16 @@ class E2B{
       static uint8_t checksum(const uint8_t *addr, uint8_t len);
     #endif
     #if E2B_HAMMING
-      uint8_t hammingEncode(uint8_t data)
-      uint8_t hammingDecode(uint8_t encodedData)
+      uint8_t hammingEncode(uint8_t data);
+      uint8_t hammingDecode(uint8_t encodedData);
     #endif
     #if E2B_LPDC
-      void ldpcEncode(byte* data, byte* encodedData, int blockSize, int numParityBits);
-      void ldpcDecode(byte* receivedData, byte* decodedData, int blockSize, int numParityBits, int numIterations);
+      uint16_t encodeLDPC(byte data);
+      byte decodeLDPC(uint16_t encodedData);
     #endif
     #if E2B_CONVOLUTION
       void convolutionalEncode(byte* data, byte* encodedData, int dataLength, int constraintLength);
       void convolutionalDecode(byte* receivedData, byte* decodedData, int dataLength, int constraintLength);
-    #endif
-    #if E2B_PARITY
-      void sendByte(byte data);
-      byte calculateParity(byte data);
-      void receiveByte();
-    #endif
-    #if E2B_AURORA
-      uint32_t calculateCrc32(byte* data, int size)
-      void calculateEcc(byte* data, int size, byte* ecc)
-      uint32_t calculateChecksum(byte* data, int size)
-      void calculateSignature(byte* data, int size, byte* signature)
-      bool verifySignature(byte* data, int size, byte* signature)
-      void correctErrors(byte* data, int size, byte* ecc, byte* crc)
-      void interleaveFragments(byte* encodedData, int numFragments, int fragmentSize)
-      void deinterleaveFragments(byte* encodedData, int numFragments, int fragmentSize)
-      void auroraEncode(byte* data, int dataSize, byte* encodedData);
-      void auroraDecode(byte* encodedData, int encodedSize, byte* decodedData);
     #endif
 };
 
