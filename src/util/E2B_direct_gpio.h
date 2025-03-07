@@ -1,10 +1,6 @@
 #ifndef E2B_Direct_GPIO_h
 #define E2B_Direct_GPIO_h
 
-// This header should ONLY be included by E2B.cpp.  These defines are
-// meant to be private, used within E2B.cpp, but not exposed to Arduino
-// sketches or other libraries which may include E2B.h.
-
 #include <stdint.h>
 
 // Platform specific I/O definitions

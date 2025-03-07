@@ -71,18 +71,6 @@ sample code bearing this copyright.
 #include "E2B.h"
 #include "util/E2B_direct_gpio.h"
 
-//These are the major change from original, we now wait quite a bit longer for some things
-/*#if E2B_ASYNC_RECV
-  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
-  //This TIMESLOT_WAIT_READ_RETRY_COUNT is new, and only used when waiting for the line to go low on a read
-  //It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
-  #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
-
-  /*void E2B::ISRPIN(){
-    (*static_E2B_instance).MasterResetPulseDetection();
-  }/
-#endif*/
-
 #ifdef ARDUINO_ARCH_ESP32
 // due to the dual core esp32, a critical section works better than disabling interrupts
 #  define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
@@ -93,17 +81,14 @@ sample code bearing this copyright.
 #  define CRIT_TIMING
 #endif
 
-uint8_t _pin;
 
 //Initializes the E2B port
 void E2B::begin(uint8_t pin){
-	_pin = pin;
-	pinMode(_pin, INPUT);
-	bitmask = PIN_TO_BITMASK(_pin);
-	baseReg = PIN_TO_BASEREG(_pin);
+	pinMode(pin, INPUT);
+	bitmask = PIN_TO_BITMASK(pin);
+	baseReg = PIN_TO_BASEREG(pin);
 
   busType = BUS;
-  hostFlag = 0;
   secureFlag = 0;
   isLocked = 0;
   unlockedState = 0;
@@ -129,22 +114,6 @@ void E2B::setBusType(uint8_t type){
 // 0 = Bus (Default), 1 = Point-to-Point (for two devices ONLY), 2 = Transceiver
 uint8_t E2B::getBusType(){
   return busType;
-}
-
-//Sets the level of the hostFlag
-//Meant for use in multi-master buses.
-void E2B::setHostFlag(unsigned char *newAddr, bool level){
-  hostFlag = level;
-  if(level){
-    newAddr[0] = FAMILYCODE_HOST;
-    newAddr[1] = FAMILYCODE;
-    //#warning "Device address changed. newAddr[0] = FAMILYCODE_HOST; newAddr[1] = FAMILYCODE_DEVICE;"
-  }
-}
-
-//Returns the level of the hostFlag - if the device is the bus host or not. Meant for use in multi-master buses.
-bool E2B::getHostFlag(){
-  return hostFlag;
 }
 
 //Sets the level of the secureFlag
@@ -644,39 +613,9 @@ void E2B::MasterResetPulseDetection(){
   previous = micros();
   diff = previous - old_previous;
   if (diff >= lowmark && diff <= highmark){
-		//Serial.println(diff);
     waitForRequestInterrupt(false);
   }
 }
-
-/*bool E2B::owsprint(){
-	//waitForRequestInterrupt(false);
-	//Serial.println("done");
-  delayMicroseconds(25);
-
-  IO_REG_TYPE mask = bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
-
-  errnum = E2B_NO_ERROR;
-  noInterrupts();
-  DIRECT_WRITE_LOW(reg, mask);
-  DIRECT_MODE_OUTPUT(reg, mask);    // drive output low
-  interrupts();
-
-  delayMicroseconds(125);
-  noInterrupts();
-  DIRECT_MODE_INPUT(reg, mask);     // allow it to float
-  interrupts();
-
-  delayMicroseconds(300 - 50);
-
-  uint8_t retries = 25;
-
-	delayMicroseconds(50);
-
-	//while (recvAndProcessCmd()){};
-	recvAndProcessCmd();
-}*/
 
 //Initializes the E2B port for asynchronous receiving of data
 void E2B::init(unsigned char rom[8]){
@@ -961,7 +900,6 @@ bool E2B::searchROM(){
 bool E2B::waitReset(uint16_t timeout_ms){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
   unsigned long time_stamp;
 
@@ -1014,15 +952,11 @@ bool E2B::waitReset(uint16_t timeout_ms){
   //Master wait is 65, so we have 35 more to send our presence now that reset is done
   return true;
 }
-/*bool E2B::waitReset(){
-  return waitReset(1000);
-}*/
 
 //Waits for the precense pulse
 bool E2B::presence(uint8_t delta){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
   //Reset code already waited 30 prior to calling this
   // Master will not read until 70 recommended, but could read as early as 60
@@ -1133,7 +1067,6 @@ uint8_t E2B::recv_async(){
 void E2B::send_bit_async(uint8_t v){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
   noInterrupts();
   DIRECT_MODE_INPUT(reg, mask);
@@ -1165,7 +1098,6 @@ void E2B::send_bit_async(uint8_t v){
 uint8_t E2B::recv_bit_async(void){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
   noInterrupts();
   DIRECT_MODE_INPUT(reg, mask);
@@ -1208,7 +1140,6 @@ uint8_t E2B::waitTimeSlot(){
 
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
   uint16_t retries;
 
   //Wait for a 0 to rise to 1 on the line for timeout duration
@@ -1244,7 +1175,6 @@ uint8_t E2B::waitTimeSlotRead(){
 
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
-	//volatile IO_REG_TYPE *reg IO_REG_ASM = PIN_TO_BASEREG(_pin);
 
   uint16_t retries;
 
@@ -1270,22 +1200,6 @@ uint8_t E2B::waitTimeSlotRead(){
 
 	return 1;
 }
-
-// Compute a Dallas Semiconductor 8-bit CRC
-/*uint8_t E2B::crc8_alt(char addr[], uint8_t len){
-  uint8_t crc = 0;
-
-  while (len--){
-    uint8_t inbyte = *addr++;
-    for (uint8_t i = 8; i; i--){
-      uint8_t mix = (crc ^ inbyte) & 0x01;
-      crc >>= 1;
-      if (mix) crc ^= 0x8C;
-        inbyte >>= 1;
-    }
-  }
-  return crc;
-}*/
 
 #endif    //E2B_ASYNC_RECV
 

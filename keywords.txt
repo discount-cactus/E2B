@@ -14,8 +14,6 @@ E2B	KEYWORD1
 
 setBusType  KEYWORD2
 getBusType KEYWORD2
-setHostFlag  KEYWORD2
-getHostFlag  KEYWORD2
 setSecureFlag  KEYWORD2
 getSecureFlag  KEYWORD2
 generateROM  KEYWORD2

@@ -71,7 +71,6 @@ class E2B{
     bool LastDeviceFlag;
 
     uint8_t busType;
-    bool hostFlag;
     bool secureFlag;
     bool isLocked;
     int unlockedState;
@@ -92,8 +91,6 @@ class E2B{
     void begin(uint8_t pin);
     void setBusType(uint8_t type);
     uint8_t getBusType();
-    void setHostFlag(unsigned char *newAddr, bool level);
-    bool getHostFlag();
     void setSecureFlag(uint8_t level, uint8_t key = 0);
     bool getSecureFlag();
     void generateROM(unsigned char *newAddr);
@@ -119,17 +116,13 @@ class E2B{
     #endif
 
     #if E2B_ASYNC_RECV
-      //E2B(uint8_t pin);
       void init(unsigned char rom[8]);
       void MasterResetPulseDetection();
-      //static void ISRPIN();
       void setScratchpad(unsigned char scratchpad[9]);
       void setPower(uint8_t power);
       bool waitForRequest(bool ignore_errors);
       bool waitForRequestInterrupt(bool ignore_errors);
       bool waitReset(uint16_t timeout_ms);
-      //bool waitReset();
-      //bool owsprint();
       bool presence(uint8_t delta);
       bool presence();
       bool searchROM();
@@ -145,7 +138,6 @@ class E2B{
       uint8_t recv_async(void);
       void send_bit_async(uint8_t v);
       uint8_t recv_bit_async(void);
-      //uint8_t crc8_alt(char addr[], uint8_t len);
 
       uint8_t errnum;
       char scratchpad[9];           //Originally a private variable
@@ -160,10 +152,6 @@ class E2B{
       static uint8_t checksum(const uint8_t *addr, uint8_t len);
     #endif
 };
-
-/*#if E2B_ASYNC_RECV
-  static E2B* static_E2B_instance;
-#endif*/
 
 // Prevent this name from leaking into Arduino sketches
 #ifdef IO_REG_TYPE
