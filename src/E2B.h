@@ -43,8 +43,8 @@
 #define FAMILYCODE_TRANSCEIVER 0x32
 
 // Device Power-Source
-#define EXTERNAL 1
-#define PARASITE 0
+//#define EXTERNAL 1
+//#define PARASITE 0
 
 #define E2B_NO_ERROR                   0
 #define E2B_READ_TIMESLOT_TIMEOUT      1
@@ -158,18 +158,6 @@ class E2B{
     #endif
     #if E2B_CHECKSUM
       static uint8_t checksum(const uint8_t *addr, uint8_t len);
-    #endif
-    #if E2B_HAMMING
-      uint8_t hammingEncode(uint8_t data);
-      uint8_t hammingDecode(uint8_t encodedData);
-    #endif
-    #if E2B_LPDC
-      uint16_t encodeLDPC(byte data);
-      byte decodeLDPC(uint16_t encodedData);
-    #endif
-    #if E2B_CONVOLUTION
-      void convolutionalEncode(byte* data, byte* encodedData, int dataLength, int constraintLength);
-      void convolutionalDecode(byte* receivedData, byte* decodedData, int dataLength, int constraintLength);
     #endif
 };
 

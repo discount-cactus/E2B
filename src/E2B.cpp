@@ -83,6 +83,16 @@ sample code bearing this copyright.
   }/
 #endif*/
 
+#ifdef ARDUINO_ARCH_ESP32
+// due to the dual core esp32, a critical section works better than disabling interrupts
+#  define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
+#  define interrupts() portEXIT_CRITICAL(&mux);}
+// for info on this, search "IRAM_ATTR" at https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/general-notes.html
+#  define CRIT_TIMING IRAM_ATTR
+#else
+#  define CRIT_TIMING
+#endif
+
 uint8_t _pin;
 
 //Initializes the E2B port
@@ -98,6 +108,11 @@ void E2B::begin(uint8_t pin){
   isLocked = 0;
   unlockedState = 0;
   secureKey = 0x00;
+
+	// you manually define the CPU frequency here for boards that do not automatically define F_CPU
+	/*#if !F_CPU
+	#define F_CPU 480000000
+	#endif*/
 
   #if E2B_SEARCH
 	 reset_search();
@@ -177,15 +192,17 @@ bool E2B::waitToTransmit(void){
 	if(loopCount >= 30){				//Returns FALSE if devices were talking for a long time. Set to greater than OR equal to to be a catch-all
 		return 0;
 	}else{											//Returns TRUE if trueCount equals 3 before the loop timeout
-		if(trueCount == 3){
+		if((loopCount < 30) && (trueCount == 3)){
 			return 1;
+		}else{
+			return 0;
 		}
 	}
 }
 
 // Perform the E2B reset function.  We will wait up to 250uS for the bus to come high, if it doesn't then it is
 // broken or shorted and we return a 0. Returns 1 if a device asserted a presence pulse, 0 otherwise.
-uint8_t E2B::reset(void){
+uint8_t CRIT_TIMING E2B::reset(void){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 	uint8_t r;
@@ -215,7 +232,7 @@ uint8_t E2B::reset(void){
 }
 
 // Write a bit. Port and bit is used to cut lookup time and provide more certain timing.
-void E2B::write_bit(uint8_t v){
+void CRIT_TIMING E2B::write_bit(uint8_t v){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
@@ -239,7 +256,7 @@ void E2B::write_bit(uint8_t v){
 }
 
 // Reads a single bit. Port and bit is used to cut lookup time and provide more certain timing.
-uint8_t E2B::read_bit(void){
+uint8_t CRIT_TIMING E2B::read_bit(void){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 	uint8_t r;
@@ -354,7 +371,7 @@ void E2B::reset_search(){
 void E2B::target_search(uint8_t family_code){
    // set the search state to find SearchFamily type devices
    ROM_NO[0] = family_code;
-   for (uint8_t i = 1; i < 8; i++)
+   for (uint8_t i=1; i < 8; i++)
       ROM_NO[i] = 0;
    LastDiscrepancy = 64;
    LastFamilyDiscrepancy = 0;
@@ -404,7 +421,7 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
       // issue the search command
       if (search_mode == true){
         write(0xF0);   // NORMAL SEARCH
-      } else {
+      }else{
         write(0xEC);   // CONDITIONAL SEARCH
       }
 
@@ -418,16 +435,16 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
          // check for no devices on 1-wire
          if ((id_bit == 1) && (cmp_id_bit == 1)){
             break;
-         } else {
+         }else{
             // all devices coupled have 0 or 1
             if (id_bit != cmp_id_bit){
                search_direction = id_bit;  // bit write value for search
-            } else {
+            }else{
                // if this discrepancy if before the Last Discrepancy
                // on a previous next then pick the same as last time
                if (id_bit_number < LastDiscrepancy){
                   search_direction = ((ROM_NO[rom_byte_number] & rom_byte_mask) > 0);
-               } else {
+               }else{
                   // if equal to last pick 1, if not then pick 0
                   search_direction = (id_bit_number == LastDiscrepancy);
                }
@@ -484,8 +501,8 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
       LastDeviceFlag = false;
       LastFamilyDiscrepancy = 0;
       search_result = false;
-   } else {
-      for (int i = 0; i < 8; i++) newAddr[i] = ROM_NO[i];
+   }else{
+      for (int i=0; i < 8; i++) newAddr[i] = ROM_NO[i];
    }
    return search_result;
 }
@@ -616,12 +633,6 @@ bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if E2B_ASYNC_RECV
-
-/*#if ARDUINO_ARCH_ESP32                    //Defines special attributes for ESP32 architecture, added on 2-2-25
-#define INTERRUPT_ATTR IRAM_ATTR
-#elif ARDUINO_ARCH_ESP8266                  //Defines special attributes for ESP8266 architecture, added on 2-2-25
-#define INTERRUPT_ATTR ICACHE_RAM_ATTR
-#endif*/
 
 volatile long previous = 0;
 volatile long old_previous = 0;
@@ -1171,7 +1182,9 @@ uint8_t E2B::recv_bit_async(void){
 
 	#if ARDUINO_ARCH_ESP32                           //Special procedure for ESP32 devices
 		#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(20)
-  	//#define TIMESLOT_WAIT_RETRY_COUNT (20*(F_CPU / 1000000L))
+  	/*#if !F_CPU
+		#define TIMESLOT_WAIT_RETRY_COUNT (20*(F_CPU / 1000000L))
+		#endif*/
 		uint16_t retries = TIMESLOT_WAIT_RETRY_COUNT; 											 //TIMESLOT_WAIT_RETRY_COUNT;
 		while ((!DIRECT_READ(reg, mask)) && (--retries == 0))
 			;
@@ -1188,6 +1201,9 @@ uint8_t E2B::recv_bit_async(void){
 //Waits for a low to high transition followed by a high to low within the time-out
 uint8_t E2B::waitTimeSlot(){
   #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+	/*#if !F_CPU
+	#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L))
+	#endif*/
   //#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L)) / 10L
 
   IO_REG_TYPE mask = bitmask;
@@ -1215,9 +1231,15 @@ uint8_t E2B::waitTimeSlot(){
 //Variant of waitTimeSlot used for reading
 uint8_t E2B::waitTimeSlotRead(){
   #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+	/*#if !F_CPU
+	#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L))
+	#endif*/
   //#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L)) / 10L
   //It was derived from knowing that the Arduino based master may go up to 130 micros more than our wait after reset
   #define TIMESLOT_WAIT_READ_RETRY_COUNT microsecondsToClockCycles(135)
+	/*#if !F_CPU
+	#define TIMESLOT_WAIT_RETRY_COUNT (135*(F_CPU / 1000000L))
+	#endif*/
   //#define TIMESLOT_WAIT_READ_RETRY_COUNT (135*(F_CPU / 1000000L)) / 10L
 
   IO_REG_TYPE mask = bitmask;
@@ -1358,287 +1380,12 @@ uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
 
 #endif    //E2B_CHECKSUM
 
-#if E2B_HAMMING
-//Hamming Code Test Sketch
-/*NOTES:
--This code demonstrates Hamming(7,4) encoding and decoding. You can modify it to suit your specific requirements.
--This implementation assumes a single-bit error. For multiple-bit errors, consider using more advanced error-correcting codes.
-*//*
 
-void setup() {
-  Serial.begin(9600);
-  while(!Serial){}
 
-  uint8_t data = 0xA; // 1010 in binary
-  uint8_t encodedData = hamming74Encode(data);
-  uint8_t decodedData = hamming74Decode(encodedData);
-
-  Serial.print("Input Data: "); Serial.println(data,HEX);
-  Serial.print("Encoded Data: "); Serial.println(encodedData, BIN);
-  Serial.print("Decoded Data: "); Serial.println(decodedData,HEX);
-}
-
-void loop(){
-}*/
-
-//Hamming(7,4) Encoding Function
-uint8_t E2B::hammingEncode(uint8_t data){
-  // Ensure data is a 4-bit number (only the lower 4 bits of the input are used)
-  data &= 0x0F;
-
-  //Returns 0 if not a 4-bit number
-  if(data < 8){
-    return 0;
-  }
-
-  // Calculate the parity bits
-  bool p1 = (data >> 3 & 1) ^ (data >> 2 & 1) ^ (data & 1); // p1: d1, d2, d4
-  bool p2 = (data >> 3 & 1) ^ (data >> 1 & 1) ^ (data & 1); // p2: d1, d3, d4
-  bool p3 = (data >> 2 & 1) ^ (data >> 1 & 1) ^ (data & 1); // p3: d2, d3, d4
-  bool d1 = bitRead(data,3);
-  bool d2 = bitRead(data,2);
-  bool d3 = bitRead(data,1);
-  bool d4 = bitRead(data,0);
-
-  // Create the 7-bit encoded value:
-  // p1 p2 d1 p3 d2 d3 d4
-  uint8_t encodedData = 0x00;
-  bitWrite(encodedData,0,p1); bitWrite(encodedData,1,p2); bitWrite(encodedData,2,d1); bitWrite(encodedData,3,p3);
-  bitWrite(encodedData,4,d2); bitWrite(encodedData,5,d3); bitWrite(encodedData,6,d4); bitWrite(encodedData,7,0);
-
-  return encodedData;
-}
-
-//Hamming(7,4) Decoding Function
-uint8_t E2B::hammingDecode(uint8_t encodedData){
-    bool p1 = bitRead(encodedData,6);
-    bool p2 = bitRead(encodedData,5);
-    bool d1 = bitRead(encodedData,4);
-    bool p3 = bitRead(encodedData,3);
-    bool d2 = bitRead(encodedData,2);
-    bool d3 = bitRead(encodedData,1);
-    bool d4 = bitRead(encodedData,0);
-
-    // Calculate parity check bits
-    bool c1 = (d1 ^ d2 ^ d4) ^ p1; // Check parity 1
-    bool c2 = (d1 ^ d3 ^ d4) ^ p2; // Check parity 2
-    bool c3 = (d2 ^ d3 ^ d4) ^ p3; // Check parity 3
-
-    // Determine the error position (if any)
-    uint8_t errorPos = c1 * 1 + c2 * 2 + c3 * 4;
-
-    // If errorPos is non-zero, there's an error at that bit position
-    if (errorPos) {
-        // Correct the error by flipping the bit at errorPos
-        encodedData ^= (1 << (7 - errorPos));  // Flip the bit at the error position
-    }
-
-    // Extract the corrected data bits (d1, d2, d3, d4)
-    /*uint8_t correctedData = ((encodedData >> 3) & 1) << 3 |  // d1
-                            ((encodedData >> 2) & 1) << 2 |  // d2
-                            ((encodedData >> 1) & 1) << 1 |  // d3
-                            (encodedData & 1);               // d4*/
-    uint8_t correctedData = 0x00;
-    bitWrite(correctedData,0,(encodedData >> 3) & 1);
-    bitWrite(correctedData,1,(encodedData >> 2) & 1);
-    bitWrite(correctedData,2,(encodedData >> 1) & 1);
-    bitWrite(correctedData,3,(encodedData & 1));
-
-    return correctedData;
-}
-
-#endif    //E2B_HAMMING
-
-#if E2B_LPDC
-//Low-Density Parity Code Test Sketch
-/*void setup(){
-  Serial.begin(9600);
-
-  byte originalData = 0xC7; // Example 8-bit data
-
-  uint16_t encodedData = encodeLDPC(originalData);
-  byte decodedData = decodeLDPC(encodedData);
-
-  Serial.println("LDPC Encoding and Decoding Example:");
-  Serial.print("Original Data: "); Serial.println(originalData, HEX);
-  Serial.print("Encoded Data: "); Serial.println(encodedData, BIN);
-  Serial.print("Decoded Data: "); Serial.println(decodedData, HEX);
-}
-
-void loop(){
-}*/
-
-// Function to encode a byte using LDPC
-uint16_t E2B::encodeLDPC(byte data){
-  const int n = 8; // Number of data bits
-  const int m = 12; // Number of total bits (including parity)
-  const int parityCheckMatrix[m - n][n] = {
-    {1, 1, 0, 0, 1, 0, 1, 1},  // Example LDPC parity-check matrix (4x8)
-    {0, 1, 1, 0, 1, 1, 1, 0},
-    {1, 0, 1, 1, 0, 1, 1, 0},
-    {1, 1, 1, 0, 1, 1, 0, 0}
-  };
-  uint16_t encodedData = 0;
-
-  // Store the original data bits in the first part of the encoded byte
-  for (int i=0; i < n; i++){
-    bitWrite(encodedData,i,bitRead(data,i));
-  }
-
-  // Calculate the parity bits and append them to the encoded byte
-  for (int i=0; i < m - n; i++){
-    bool parityBit = 0;
-    for (int j=0; j < n; j++){
-      parityBit += bitRead(data,i) * parityCheckMatrix[i][j];
-    }
-    // Place the parity bits in the remaining positions in encodedData
-    encodedData |= (parityBit << (n + i));
-  }
-
-  return encodedData;
-}
-
-// Function to decode a byte using LDPC
-byte E2B::decodeLDPC(uint16_t encodedData){
-  const int n = 8; // Number of data bits
-  const int m = 12; // Number of total bits (including parity)
-  const int parityCheckMatrix[m - n][n] = {
-    {1, 1, 0, 0, 1, 0, 1, 1},  // Example LDPC parity-check matrix (4x8)
-    {0, 1, 1, 0, 1, 1, 1, 0},
-    {1, 0, 1, 1, 0, 1, 1, 0},
-    {1, 1, 1, 0, 1, 1, 0, 0}
-  };
-  byte decodedData = 0;
-
-  // Example hard-decision decoding (simplified)
-  for (int i=0; i < n; i++){
-    bool parityBit = 0;
-    for (int j=0; j < m - n; j++){
-      parityBit += bitRead(encodedData,i) * parityCheckMatrix[j][i];
-    }
-
-    // If parity check fails (parityBit is 1), we flip the corresponding data bit
-    bitWrite(decodedData,i,parityBit);
-  }
-
-  return decodedData;
-}
-
-#endif        //E2B_LPDC
-
-#if E2B_CONVOLUTION
-//Convolution codes
-/*NOTES:
-
-Test sketch:
-//This implementation demonstrates basic convolutional encoding and decoding using the Viterbi algorithm.
-
-const int dataLength = 10;
-const int constraintLength = 3;
-
-byte data[dataLength] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF, 0x12, 0x34};
-byte encodedData[2 * dataLength];
-byte receivedData[2 * dataLength];
-byte decodedData[dataLength];
-
-void setup(){
-  Serial.begin(9600);
-
-  // Encode data
-  convolutionalEncode(data, encodedData, dataLength, constraintLength);
-
-  // Simulate transmission error (optional)
-  // receivedData[3] ^= 0x01;
-
-  // Copy encoded data to received data
-  for (int i = 0; i < 2 * dataLength; i++){
-    receivedData[i] = encodedData[i];
-  }
-
-  // Decode received data
-  convolutionalDecode(receivedData, decodedData, dataLength, constraintLength);
-
-  Serial.print("Original Data: ");
-  for (int i = 0; i < dataLength; i++){
-    Serial.print(data[i], HEX);
-  }
-  Serial.println();
-
-  Serial.print("Decoded Data: ");
-  for (int i = 0; i < dataLength; i++){
-    Serial.print(decodedData[i], HEX);
-  }
-  Serial.println();
-}
-
-void loop(){
-}
-*/
-//Convolutional Code Encoder Function:
-void E2B::convolutionalEncode(byte* data, byte* encodedData, int dataLength, int constraintLength){
-  int i, j;
-  byte shiftRegister[constraintLength];
-
-  // Initialize shift register
-  for (i = 0; i < constraintLength; i++){
-    shiftRegister[i] = 0;
-  }
-
-  // Encode data
-  for (i = 0; i < dataLength; i++){
-    // Shift data into shift register
-    for (j = constraintLength - 1; j > 0; j--){
-      shiftRegister[j] = shiftRegister[j - 1];
-    }
-    shiftRegister[0] = data[i];
-
-    // Generate parity bits
-    encodedData[2 * i] = shiftRegister[0] ^ shiftRegister[1] ^ shiftRegister[2];
-    encodedData[2 * i + 1] = shiftRegister[0] ^ shiftRegister[2];
-  }
-}
-
-//Convolutional Code Decoder Function (Viterbi Algorithm):
-void E2B::convolutionalDecode(byte* receivedData, byte* decodedData, int dataLength, int constraintLength){
-  int i, j, k;
-  int trellis[constraintLength][2];
-  int branchMetrics[constraintLength][2];
-  int pathMetrics[constraintLength];
-
-  // Initialize trellis and branch metrics
-  for (i = 0; i < constraintLength; i++){
-    trellis[i][0] = 0;
-    trellis[i][1] = 0;
-    branchMetrics[i][0] = 0;
-    branchMetrics[i][1] = 0;
-  }
-
-  // Decode received data
-  for (i = 0; i < dataLength; i++){
-    // Compute branch metrics
-    for (j = 0; j < constraintLength; j++){
-      branchMetrics[j][0] = (receivedData[2 * i] == (trellis[j][0] ^ trellis[j][1] ^ trellis[j][2])) ? 0 : 1;
-      branchMetrics[j][1] = (receivedData[2 * i + 1] == (trellis[j][0] ^ trellis[j][2])) ? 0 : 1;
-    }
-
-    // Update trellis and path metrics
-    for (j = 0; j < constraintLength; j++){
-      pathMetrics[j] = branchMetrics[j][0] + (j == 0 ? 0 : pathMetrics[j - 1]);
-      trellis[j][0] = (j == 0 ? 0 : trellis[j - 1][0]);
-      trellis[j][1] = (j == 0 ? 0 : trellis[j - 1][1]);
-    }
-
-    // Select most likely path
-    k = 0;
-    for (j = 1; j < constraintLength; j++){
-      if (pathMetrics[j] < pathMetrics[k]){
-        k = j;
-      }
-    }
-
-    // Output decoded bit
-    decodedData[i] = trellis[k][0];
-  }
-}
-
-#endif        //E2B_CONVOLUTION
+// undef defines for no particular reason
+#ifdef ARDUINO_ARCH_ESP32
+#  undef noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
+#  undef interrupts() portEXIT_CRITICAL(&mux);}
+#endif
+// for info on this, search "IRAM_ATTR" at https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/general-notes.html
+#undef CRIT_TIMING
