@@ -81,7 +81,6 @@ sample code bearing this copyright.
 #  define CRIT_TIMING
 #endif
 
-
 //Initializes the E2B port
 void E2B::begin(uint8_t pin){
 	pinMode(pin, INPUT);
@@ -621,6 +620,12 @@ void E2B::MasterResetPulseDetection(){
 void E2B::init(unsigned char rom[8]){
 	for (int i=0; i<7; i++)
     this->rom[i] = rom[i];
+
+	// Initializes all function pointers to NULL for user-defined functions
+	for(int i=0; i < 256; i++){
+	    userFunc[i] = NULL;
+	}
+
 	#if E2B_CRC
 		uint8_t romUINT[7];
 		for (int i=0; i<7; i++)
@@ -649,8 +654,8 @@ void E2B::setPower(uint8_t power){
 }
 
 //Enables users to define their own functions for the device to automatically respond with
-typedef void (*FuncPointerArray)(void);
-FuncPointerArray userFunc[256];
+//typedef void (*FuncPointerArray)(void);
+//FuncPointerArray userFunc[256];
 void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
 	userFunc[num] = userFunction;
 	#if E2B_CRC
@@ -788,7 +793,7 @@ bool E2B::recvAndProcessCmd(){
           return false;
         return true;
       default: // Unknow command
-        if (errnum == E2B_NO_ERROR)
+				if (errnum == E2B_NO_ERROR)
           break; // skip if no error
         else
           return false;
@@ -805,7 +810,7 @@ bool E2B::recvAndProcessCmd(){
 bool E2B::duty(){
 	uint8_t done = recv_async();
 	if(FAMILYCODE != FAMILYCODE_TRANSCEIVER){
-  	scratchpad[4] = done;                  //Added on 7-15-24 for transceiver functionality, replaces slot for temperature resolution
+  	scratchpad[4] = done;
 	}
 	//Serial.print("done: "); Serial.println(done,HEX);
 
@@ -833,9 +838,9 @@ bool E2B::duty(){
     case 0x3A: // UNLOCK REQUEST
       {
         uint8_t receivedKey = recv_async();
-        if(receivedKey == secureKey){ //Unlocks the device if receivedKey matches the key of the secured device (unlocked for the commands)
+        if(receivedKey == secureKey){					//Unlocks the device if receivedKey matches the key of the secured device (unlocked for the commands)
           isLocked = 0;
-          unlockedState = 3;    //Processes 3 commands before locking again
+          unlockedState = 3;									//Processes 3 commands before locking again
           //#warning "Secured device unlocked for 3 commands."
         }
   			if (errnum != E2B_NO_ERROR)
@@ -847,27 +852,17 @@ bool E2B::duty(){
 			if (errnum != E2B_NO_ERROR)
 				return false;
 			break;
-		/*case 0x44: // CONVERT SENSOR
-			userFunc[0x44];                       //originally user44hFunc();
-			if (errnum != E2B_NO_ERROR)
-				return false;
-			break;
-		case 0x48: // CONVERT SENSOR
-			userFunc[0x48];                       //originally user48hFunc();
-			if (errnum != E2B_NO_ERROR)
-				return false;
-			break;
-		case 0xB8: // CONVERT SENSOR
-			userFunc[0xB8];                       //originally userB8hFunc();
-			if (errnum != E2B_NO_ERROR)
-				return false;
-			break;*/
 		default:
-			break;
-			if (errnum == E2B_NO_ERROR)
-				break; // skip if no error
-			else
-				return false;
+			if(errnum == E2B_NO_ERROR){
+				if (userFunc[done] != NULL){		//Executes the user-defined function at that entry
+						userFunc[done]();
+						return true;
+				}else{													//No user-defined function, so return false
+						return false;
+				}
+			}else{
+					return false;
+			}
 	return true;
   }
 }

@@ -129,9 +129,6 @@ class E2B{
       bool duty();
       uint8_t getScratchpad(uint8_t i);
       void attachUserCommand(uint8_t num, void (*)(void));
-      //void attach44h (void (*)(void));
-      //void attach48h (void (*)(void));
-      //void attachB8h (void (*)(void));
       uint8_t sendData_async(char buf[], uint8_t data_len);
       uint8_t recvData_async(char buf[], uint8_t data_len);
       void send_async(uint8_t v);
@@ -141,6 +138,9 @@ class E2B{
 
       uint8_t errnum;
       char scratchpad[9];           //Originally a private variable
+
+      typedef void (*FuncPointerArray)(void);
+      FuncPointerArray userFunc[256];
     #endif
 
     #if E2B_CRC
