@@ -83,6 +83,10 @@ class E2B{
       uint8_t waitTimeSlotRead();
       uint8_t power;
       char rom[8];
+
+      volatile long previous;
+      volatile long old_previous;
+      volatile long diff;
     #endif
 
   public:
