@@ -55,16 +55,13 @@
 #define E2B_PRESENCE_LOW_ON_LINE       6
 #define E2B_READ_TIMESLOT_TIMEOUT_LOW  7
 #define E2B_READ_TIMESLOT_TIMEOUT_HIGH 8
-
 #define E2B_SECURED_AND_LOCKED         9
 
 class E2B{
   private:
-    //E2B
     IO_REG_TYPE bitmask;
     volatile IO_REG_TYPE *baseReg;
 
-    // global search state
     unsigned char ROM_NO[8];
     uint8_t LastDiscrepancy;
     uint8_t LastFamilyDiscrepancy;
@@ -76,7 +73,6 @@ class E2B{
     int unlockedState;
     uint8_t secureKey;
 
-    //E2Bslave
     #if E2B_ASYNC_RECV
       bool recvAndProcessCmd();
       uint8_t waitTimeSlot();
@@ -132,7 +128,6 @@ class E2B{
       bool searchROM();
       bool duty();
       uint8_t getScratchpad(uint8_t i);
-      void attachUserCommand(uint8_t num, void (*)(void));
       uint8_t sendData_async(char buf[], uint8_t data_len);
       uint8_t recvData_async(char buf[], uint8_t data_len);
       void send_async(uint8_t v);
@@ -140,11 +135,14 @@ class E2B{
       void send_bit_async(uint8_t v);
       uint8_t recv_bit_async(void);
 
+      #if E2B_ASYNC_CUSTOM_FUNC
+        void attachUserCommand(uint8_t num, void (*)(void));
+        typedef void (*FuncPointerArray)(void);
+        FuncPointerArray userFunc[256];
+      #endif
+
       uint8_t errnum;
       char scratchpad[9];           //Originally a private variable
-
-      typedef void (*FuncPointerArray)(void);
-      FuncPointerArray userFunc[256];
     #endif
 
     #if E2B_CRC

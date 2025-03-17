@@ -623,9 +623,11 @@ void E2B::init(unsigned char rom[8]){
 		diff = 0;*/
 
 	// Initializes all function pointers to NULL for user-defined functions
-	for(int i=0; i < 256; i++){
-	    userFunc[i] = NULL;
-	}
+	#if E2B_ASYNC_CUSTOM_FUNC
+		for(int i=0; i < 256; i++){
+		    userFunc[i] = NULL;
+		}
+	#endif
 
 	#if E2B_CRC
 		uint8_t romUINT[7];
@@ -654,6 +656,7 @@ void E2B::setPower(uint8_t power){
   this->power = power;
 }
 
+#if E2B_ASYNC_CUSTOM_FUNC
 //Enables users to define their own functions for the device to automatically respond with
 //typedef void (*FuncPointerArray)(void);
 //FuncPointerArray userFunc[256];
@@ -667,24 +670,7 @@ void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
 		//this->scratchpad[8] = crc8(this->scratchpad,8);
 	#endif
 }
-
-/*void (*user44hFunc)(void);
-void E2B::attach44h(void (*userFunction44h)(void)){
-	user44hFunc = userFunction44h;
-	#if E2B_CRC
-		this->scratchpad[8] = crc8(this->scratchpad, 8);
-	#endif
-}
-
-void (*user48hFunc)(void);
-void E2B::attach48h(void (*userFunction48h)(void)){
-	user48hFunc = userFunction48h;
-}
-
-void (*userB8hFunc)(void);
-void E2B::attachB8h(void (*userFunctionB8h)(void)){
-	userB8hFunc = userFunctionB8h;
-}*/
+#endif
 
 //Synchronously waits for data to be received
 bool E2B::waitForRequest(bool ignore_errors){
@@ -855,12 +841,16 @@ bool E2B::duty(){
 			break;
 		default:
 			if(errnum == E2B_NO_ERROR){
-				if (userFunc[done] != NULL){		//Executes the user-defined function at that entry
-						userFunc[done]();
-						return true;
-				}else{													//No user-defined function, so return false
-						return false;
-				}
+				#if E2B_ASYNC_CUSTOM_FUNC
+					if (userFunc[done] != NULL){		//Executes the user-defined function at that entry
+							userFunc[done]();
+							return true;
+					}else{													//No user-defined function, so return false
+							return false;
+					}
+				#else
+					return true;
+				#endif
 			}else{
 					return false;
 			}
