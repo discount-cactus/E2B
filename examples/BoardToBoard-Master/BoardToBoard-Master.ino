@@ -8,20 +8,15 @@ unsigned char scratchpad[9] = {0x00, 0x00, 0x4B, 0x46, 0x7F, 0xFF, 0x00, 0x10, 0
 
 E2B e2b(E2B_pin);  // on pin 2 (a 4.7K resistor is necessary)
 
+//uint8_t KEY = 0x30; //CHANGE TO SECURED DEVICE KEY TO UNLOCK A SECURED DEVICE
+
 void setup(){
-  attachInterrupt(E2B_pin,respond,CHANGE);
   Serial.begin(9600);
   while(!Serial);
   Serial.println("E2B Master Node Test.");
-  e2b.init(rom);
-  e2b.setScratchpad(scratchpad);
 
-  e2b.setDeviceType(BUS);
+  //setHostFlag(rom,1);                 //Use when connecting multiple masters to the bus
   //e2b.setDeviceType(POINTTOPOINT);    //Can use this when only one device is connected
-}
-
-void respond(){
-  e2b.MasterResetPulseDetection();
 }
 
 void loop(){
@@ -41,7 +36,7 @@ void loop(){
   }
   
   Serial.print("ROM =");
-  for( i = 0; i < 8; i++) {
+  for(i=0; i < 8; i++) {
     Serial.write(' ');
     Serial.print(addr[i], HEX);
   }
@@ -55,24 +50,25 @@ void loop(){
   //Transmits ddata
   e2b.reset();
   e2b.select(addr);
+  //e2b.unlock(KEY);        // uncomment when addressing secured devices
   e2b.write(0x44,1);        // start conversion, with parasite power on at the end
   
   delay(1000);
   
   present = e2b.reset();
   e2b.select(addr);
-  //e2b.skip();              //Use this instead of "e2b.select(addr);" if one device is connected.
+  //e2b.unlock(KEY);        // uncomment when addressing secured devices
   e2b.write(0xBE);         // Read Scratchpad
 
   Serial.print("  Data = ");
   Serial.print(present, HEX);
   Serial.print(" ");
-  for ( i = 0; i < 9; i++) {           // we need 9 bytes
+  for (i=0; i < 9; i++) {           // we need 9 bytes
     data[i] = e2b.read();
     Serial.print(data[i], HEX);
     Serial.print(" ");
   }
   Serial.print(" CRC=");
-  //Serial.print(E2B::crc8(data, 8), HEX);
+  Serial.print(E2B::crc8(data, 8), HEX);
   Serial.println();
 }

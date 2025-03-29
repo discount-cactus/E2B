@@ -1,9 +1,4 @@
-// OneWire DS18S20, DS18B20, DS1822 Temperature Example
-//
-// http://www.pjrc.com/teensy/td_libs_OneWire.html
-//
-// The DallasTemperature library can do all this work for you!
-// https://github.com/milesburton/Arduino-Temperature-Control-Library
+//E2B DS18x20 Temperature Sensor Example
 #include <E2B.h>
 
 #define E2B_pin 2
@@ -11,22 +6,15 @@
 unsigned char rom[8] = {FAMILYCODE, 0xAD, 0xDA, 0xCE, 0x0F, 0x00, 0x11, 0x00};
 unsigned char scratchpad[9] = {0x00, 0x00, 0x4B, 0x46, 0x7F, 0xFF, 0x00, 0x10, 0x00};
 
-E2B ds(E2B_pin);  // on pin 10 (a 4.7K resistor is necessary)
+E2B ds(E2B_pin);  // on pin 2 (a 4.7K resistor is necessary)
 
-void setup() {
-  attachInterrupt(E2B_pin,respond,CHANGE);
+void setup(){
   Serial.begin(9600);
   while(!Serial);
-  Serial.println("Test.");
-  ds.init(rom);
-  ds.setScratchpad(scratchpad);
+  Serial.println("DS18x20 Temperature Sensor Test.");
 }
 
-void respond(){
-  ds.MasterResetPulseDetection();
-}
-
-void loop(void) {
+void loop(){
   byte i;
   byte present = 0;
   byte type_s;

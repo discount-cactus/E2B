@@ -9,6 +9,9 @@
 
 #if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__) || defined(__AVR_ATtiny13__) || defined(__AVR_ATtiny10__)
 #define FAMILYCODE 0xA0
+#elif defined(__LGT8F__)      //Defined here because LGT328 boards are of AVR architectures (since they're a drop-in replacement to the nanov3.0)
+#define IO_REG_TYPE uint8_t
+#define FAMILYCODE 0xB1
 #else
 #define FAMILYCODE 0xA1
 #endif
@@ -51,7 +54,7 @@
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAD
 #elif defined(CH32V20x) || defined(CH32V203xB) || defined(CH32V208) || defined(CH32V30x) || defined(CH32V30x_C) || defined(CH32V10x) || defined(CH32V00x) || defined(CH32X035)
-#error "CH32 support does not exist (yet)"
+//#error "CH32 support does not exist (yet)"
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAE
 #elif defined(__riscv)

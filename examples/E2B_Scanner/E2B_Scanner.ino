@@ -1,6 +1,8 @@
-//E2B Scanner
-//pinScan() scans a single pin for devices
-//deviceScan() scans every pin in the specified range for devices
+//E2B Scanner Example
+/*NOTES:
+pinScan() scans a single pin for devices
+deviceScan() scans every pin in the specified range for devices
+*/
 #include <E2B.h>
 
 const int startPin = 2;
@@ -22,10 +24,10 @@ void loop(){
 }
 
 
-
+//Scans a single pin for an E2B-compatible device
 int pinScan(int pin){
   E2B e2b(pin);
-  e2b.init(rom);
+  //e2b.init(rom);
   int num = 0;
 
   byte i;
@@ -57,7 +59,13 @@ int pinScan(int pin){
     switch(addr[0]){
       default:
         Serial.print("\t\tUnknown");
-        return;
+        break;
+      case FAMILYCODE_HOST:
+        Serial.print("\t\tHOST");
+        break;
+       case FAMILYCODE_TRANSCEIVER:
+        Serial.print("\t\tTRANSCEIVER");
+        break;
       case 0x10:
         Serial.print("\t\tDS18S20");  // or old DS1820
         break;
@@ -79,6 +87,12 @@ int pinScan(int pin){
       case 0x29:
         Serial.print("\t\tDS2408");
         break;
+      case 0x3A:
+        Serial.print("\t\tDS2413");
+        break;
+      case 0x43:
+        Serial.print("\t\tDS28EC20");
+        break;
       case 0x56:
         Serial.print("\t\tDS28E18");
         break;
@@ -96,6 +110,9 @@ int pinScan(int pin){
         break;
       case 0xA9:
         Serial.print("\t\tSAMD21");
+        break;
+      case 0xB1:
+        Serial.print("\t\tLGT8F");
         break;
     }
     
@@ -131,6 +148,7 @@ int pinScan(int pin){
   return num;
 }
 
+//Scans an array of pins for E2B-compatible devices
 int deviceScan(int startPin, int endPin){
   //int count = 0;
   for(uint8_t pin=startPin; pin < endPin; pin++){

@@ -1,4 +1,5 @@
-//E2B DS2417 RTC example
+//E2B DS2417 RTC Example
+//Code is largely from the forum: https://forum.arduino.cc/t/adding-ds2417-rtc-to-existing-analog-clock-code/556083/3
 #include <E2B.h>
 
 #define E2B_pin 2
@@ -6,18 +7,11 @@
 unsigned char rom[8] = {FAMILYCODE, 0xAD, 0xDA, 0xCE, 0x0F, 0x00, 0x11, 0x00};
 unsigned char scratchpad[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-E2B ds(E2B_pin);
+E2B e2b(E2B_pin);
 
-void setup(void) {
-  attachInterrupt(E2B_pin,respond,CHANGE);
+void setup(void){
   Serial.begin(9600);
-  while(!Serial);
-  ds.init(rom);
-  ds.setScratchpad(scratchpad);
-}
-
-void respond(){
-  ds.MasterResetPulseDetection();
+  while(!Serial){}
 }
 
 void loop(){
@@ -26,9 +20,9 @@ void loop(){
   byte data[8];
   byte addr[8];
 
-  if (!ds.search(addr)){
+  if (!e2b.search(addr)){
       Serial.print("No more addresses found.\n");
-      ds.reset_search();
+      e2b.reset_search();
       delay(500);  // for readability
       return;
   }
@@ -39,7 +33,7 @@ void loop(){
     Serial.print(" ");
   }
 
-  if(E2B::crc8( addr, 7) != addr[7]){
+  if(E2B::crc8(addr,7) != addr[7]){
       Serial.print("CRC is not valid!\n");
       return;
   }
@@ -50,32 +44,32 @@ void loop(){
   }
 
 
-  // write!
+  //Write to the device
   Serial.println("writing to RTC...");
-  present = ds.reset();
-  ds.select(addr);
-  ds.write(0x99,1);   // write RTC - this is the write code
-  ds.write(0xAC);  //This is the control byte.  AC in hex = 10101100
+  present = e2b.reset();
+  e2b.select(addr);
+  e2b.write(0x99,1);   // write RTC - this is the write code
+  e2b.write(0xAC);  //This is the control byte.  AC in hex = 10101100
                    //read the datasheet and you will see that this is important
                    //to start the internal osc's... Or to make the clock start
-                   //counting seconds.  --ril3y
- // ds.write(0x00);  //0x02 is a random time set it with your own
- // ds.write(0x03);  //same with this
-//  ds.write(0x05);  //this
- // ds.write(0x08);  //and this
-  present = ds.reset();
+                   //counting secone2b.  --ril3y
+ // e2b.write(0x00);  //0x02 is a random time set it with your own
+ // e2b.write(0x03);  //same with this
+//  e2b.write(0x05);  //this
+ // e2b.write(0x08);  //and this
+  present = e2b.reset();
   delay(1000);     // unknown if wait needed
 
 
-  // read!
-  present = ds.reset();
-  ds.select(addr);
-  ds.write(0x66,1);   // read RTC
+  //Read from device
+  present = e2b.reset();
+  e2b.select(addr);
+  e2b.write(0x66,1);   // read RTC
 
   Serial.print("PR: ");
   Serial.print(present, HEX);
   for (i=0; i < 5; i++) {
-    data[i] = ds.read();
+    data[i] = e2b.read();
   }
   Serial.print(" CTRL BYTE:  ");
   Serial.print(data[0], BIN);

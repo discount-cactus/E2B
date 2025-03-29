@@ -1,6 +1,5 @@
 //ATtiny UART-to-E2B bridge example
 //Simple conversion from UART-to-E2B bridge for use as a seamless transceiver between devices
-
 /*NOTES:
 -MADE FOR USE WITH THE ATTINY85 MICROCONTROLLER
 -Receives a UART packet and transmits it on the E2B pin
@@ -8,12 +7,9 @@
 
 -ATtiny85 does not feature a dedicated UART port, so SoftwareSerial is used
 
--TaskScheduler is used to complete sending and receiving of different protocols in parallel
--Link to TaskScheduler library: https://github.com/arkhipenko/TaskScheduler
-
-Hookup :
-ATtiny85 RX pin: -> Arduino RX     (pin 0 on Arduino Uno)
-ATtiny85 TX pin: -> Arduino TX     (pin 1 on Arduino Uno)
+Wiring:
+ATtiny85 TX pin: -> Arduino RX     (pin 0 on Arduino Uno)
+ATtiny85 RX pin: -> Arduino TX     (pin 1 on Arduino Uno)
 */
 #include <E2B.h>
 #include <SoftwareSerial.h>
@@ -23,10 +19,8 @@ ATtiny85 TX pin: -> Arduino TX     (pin 1 on Arduino Uno)
 #define txPin 4
 #define dirPin 1
 
-unsigned char rom[8] = {FAMILYCODE, 0xB2, 0xDD, 0x03, 0x00, 0x00, 0x11, 0x00};
+unsigned char rom[8] = {FAMILYCODE_TRANSCEIVER, FAMILYCODE, 0xDD, 0x03, 0x00, 0x00, 0x11, 0x00};
 unsigned char scratchpad[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-//byte localscratchpad[9]; // buffer for data
-//byte addr[8]; // 64-bit device address
 
 E2B e2b(E2B_pin);
 SoftwareSerial mySerial(rxPin, txPin);
@@ -37,7 +31,7 @@ void setup(){
   e2b.setScratchpad(scratchpad);
   //Serial.begin(9600);
   //while(!Serial){}
-  e2b.setDeviceType(TRANSCEIVER);
+  e2b.setBusType(TRANSCEIVER);
   mySerial.begin(9600);
   pinMode(dirPin,INPUT);
 }
