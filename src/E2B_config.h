@@ -10,17 +10,17 @@
 
 // you can exclude asynchronous E2B receiving by defining this to 0
 #ifndef E2B_ASYNC_CUSTOM_FUNC
-#define E2B_ASYNC_CUSTOM_FUNC 1
+#define E2B_ASYNC_CUSTOM_FUNC 0
 #endif
 
 // you can exclude E2B search by defining this to 0
 #ifndef E2B_SEARCH
-#define E2B_SEARCH 0
+#define E2B_SEARCH 1
 #endif
 
 // you can exclude E2B CRC by defining this to 0
 #ifndef E2B_CRC
-#define E2B_CRC 0
+#define E2B_CRC 1
 #endif
 
 // you can exclude E2B Checksum by defining this to 0, defaulted to 0

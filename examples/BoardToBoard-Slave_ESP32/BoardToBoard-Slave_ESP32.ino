@@ -1,6 +1,6 @@
 //Board-to-Board example - Slave node
 /*NOTES:
--For ESP32 boards, use pin 4 rather than the normally recommended pin 2
+-For ESP32 boards, pin 4 is the recommended pin rather than the normal pin 2 for other boards
 */
 #include <E2B.h>
 

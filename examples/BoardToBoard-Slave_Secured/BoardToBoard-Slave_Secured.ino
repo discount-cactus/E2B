@@ -1,6 +1,9 @@
 //Board-to-Board example - Secured Slave node
 #include <E2B.h>
 /* NOTES:
+-For ATtiny85, the Serial.print and Serial.println lines will have to be removed
+-For ATtiny85, modify E2B_config.h to clear up more program memory space
+
 -Secured slave nodes cannot be communicated with until unlocked by an unlock(KEY) command
  where the device is unlocked to receive one command before it is automatically locked again
  

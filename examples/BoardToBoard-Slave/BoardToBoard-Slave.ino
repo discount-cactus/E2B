@@ -1,4 +1,8 @@
 //Board-to-Board example - Slave node
+/*NOTES:
+-For ATtiny85, the Serial.print and Serial.println lines will have to be removed
+-For ATtiny85, modify E2B_config.h to clear up more program memory space
+*/
 #include <E2B.h>
 
 #define E2B_pin 2

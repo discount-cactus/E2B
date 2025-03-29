@@ -244,7 +244,7 @@ uint8_t CRIT_TIMING E2B::read_bit(void){
 // Writes a byte of data.
 /*The writing code uses the active drivers to raise the pin high, if you need power after the write (e.g. DS18S20 inparasite power mode)
 then set 'power' to 1, otherwise the pin will go tri-state at the end of the write to avoid heating in a short or other mishap.*/
-void E2B::write(uint8_t v, uint8_t power /* = 0 */){
+void E2B::write(uint8_t v, uint8_t power){
   uint8_t bitMask;
 
   for (bitMask = 0x01; bitMask; bitMask <<= 1){
@@ -259,7 +259,7 @@ void E2B::write(uint8_t v, uint8_t power /* = 0 */){
 }
 
 //Writes multiple bytes of data
-void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */){
+void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power){
   for (uint16_t i=0; i < count ; i++)
     write(buf[i]);
   if (!power){
@@ -363,7 +363,7 @@ void E2B::target_search(uint8_t family_code){
 // search state.
 // Return true  : device found, ROM number in ROM_NO buffer
 //        false : device not found, end of search
-bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
+bool E2B::search(uint8_t *newAddr, bool search_mode){
    uint8_t id_bit_number;
    uint8_t last_zero, rom_byte_number;
    bool    search_result;
@@ -479,7 +479,7 @@ bool E2B::search(uint8_t *newAddr, bool search_mode /* = true */){
 }
 
 // Performs an E2B search and logs the addresses to a struct for later use.
-bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode /* = true */){
+bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode){
    uint8_t id_bit_number;
    uint8_t last_zero, rom_byte_number;
    bool    search_result;

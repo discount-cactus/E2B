@@ -1,6 +1,8 @@
-//E2B Scanner
-//pinScan() scans a single pin for devices
-//deviceScan() scans every pin in the specified range for devices
+//E2B Scanner Example
+/*NOTES:
+pinScan() scans a single pin for devices
+deviceScan() scans every pin in the specified range for devices
+*/
 #include <E2B.h>
 
 const int startPin = 2;
@@ -22,7 +24,7 @@ void loop(){
 }
 
 
-
+//Scans a single pin for an E2B-compatible device
 int pinScan(int pin){
   E2B e2b(pin);
   //e2b.init(rom);
@@ -146,6 +148,7 @@ int pinScan(int pin){
   return num;
 }
 
+//Scans an array of pins for E2B-compatible devices
 int deviceScan(int startPin, int endPin){
   //int count = 0;
   for(uint8_t pin=startPin; pin < endPin; pin++){

@@ -1,9 +1,4 @@
-// OneWire DS18S20, DS18B20, DS1822 Temperature Example
-//
-// http://www.pjrc.com/teensy/td_libs_OneWire.html
-//
-// The DallasTemperature library can do all this work for you!
-// https://github.com/milesburton/Arduino-Temperature-Control-Library
+//E2B DS18x20 Temperature Sensor Example
 #include <E2B.h>
 
 #define E2B_pin 2
@@ -19,7 +14,7 @@ void setup(){
   Serial.println("DS18x20 Temperature Sensor Test.");
 }
 
-void loop(void) {
+void loop(){
   byte i;
   byte present = 0;
   byte type_s;
