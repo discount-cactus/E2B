@@ -143,7 +143,7 @@ void E2B::generateROM(unsigned char *newAddr){
 }
 
 //Waits for devices to stop talking to transmit data. Primarily used for buses with multiple master devices
-bool E2B::waitToTransmit(void){
+/*bool E2B::waitToTransmit(void){
 	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 	uint8_t trueCount = 0;
@@ -166,7 +166,7 @@ bool E2B::waitToTransmit(void){
 			return 0;
 		}
 	}
-}
+}*/
 
 // Perform the E2B reset function.  We will wait up to 250uS for the bus to come high, if it doesn't then it is
 // broken or shorted and we return a 0. Returns 1 if a device asserted a presence pulse, 0 otherwise.
@@ -1006,7 +1006,7 @@ bool E2B::presence(){
 }
 
 //Asynchronously sends multiple bytes of data
-uint8_t E2B::sendData_async(char buf[], uint8_t len){
+/*uint8_t E2B::sendData_async(char buf[], uint8_t len){
   uint8_t bytes_sent = 0;
 
   for (int i=0; i<len; i++){
@@ -1016,10 +1016,10 @@ uint8_t E2B::sendData_async(char buf[], uint8_t len){
     bytes_sent++;
   }
   return bytes_sent;
-}
+}*/
 
 //Asynchronously reads multiple bytes of data
-uint8_t E2B::recvData_async(char buf[], uint8_t len){
+/*uint8_t E2B::recvData_async(char buf[], uint8_t len){
   uint8_t bytes_received = 0;
 
   for (int i=0; i<len; i++){
@@ -1036,10 +1036,10 @@ void E2B::send_async(uint8_t v){
   errnum = E2B_NO_ERROR;
   for (uint8_t bitmask = 0x01; bitmask && (errnum == E2B_NO_ERROR); bitmask <<= 1)
   	send_bit_async((bitmask & v)?1:0);
-}
+}*/
 
 //Asynchronously reads a byte of data
-uint8_t E2B::recv_async(){
+/*uint8_t E2B::recv_async(){
   uint8_t r = 0;
 
   errnum = E2B_NO_ERROR;
@@ -1078,10 +1078,10 @@ void E2B::send_bit_async(uint8_t v){
   }
   interrupts();
   return;
-}
+}*/
 
 //Asynchronously reads a bit of data
-uint8_t E2B::recv_bit_async(void){
+/*uint8_t E2B::recv_bit_async(void){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 
@@ -1102,7 +1102,7 @@ uint8_t E2B::recv_bit_async(void){
 		#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(20)
   	/*#if !F_CPU
 		#define TIMESLOT_WAIT_RETRY_COUNT (20*(F_CPU / 1000000L))
-		#endif*/
+		#endif/
 		uint16_t retries = TIMESLOT_WAIT_RETRY_COUNT; 											 //TIMESLOT_WAIT_RETRY_COUNT;
 		while ((!DIRECT_READ(reg, mask)) && (--retries == 0))
 			;
@@ -1114,7 +1114,7 @@ uint8_t E2B::recv_bit_async(void){
 		interrupts();
 	  return r;
 	#endif
-}
+}*/
 
 //Waits for a low to high transition followed by a high to low within the time-out
 uint8_t E2B::waitTimeSlot(){

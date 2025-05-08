@@ -1,15 +1,13 @@
 #ifndef E2B_h
 #define E2B_h
 
-//#include <inttypes.h>     //Added 7-30-24. Placed under OneWireSlave_h in OneWireSlave.h so may need this
-
 #ifdef __cplusplus
 
 #include <stdint.h>
 
-#if defined(__AVR__)        //May not need this??????
+/*#if defined(__AVR__)        //May not need this??????
 #include <util/crc16.h>
-#endif
+#endif*/
 
 #if ARDUINO >= 100
 #include <Arduino.h>       // for delayMicroseconds, digitalPinToBitMask, etc
@@ -94,7 +92,7 @@ class E2B{
     void setSecureFlag(uint8_t level, uint8_t key = 0);
     bool getSecureFlag();
     void generateROM(unsigned char *newAddr);
-    bool waitToTransmit(void);
+    //bool waitToTransmit(void);
     uint8_t reset(void);
     void select(const uint8_t rom[8]);
     void skip(void);
@@ -128,12 +126,12 @@ class E2B{
       bool searchROM();
       bool duty();
       uint8_t getScratchpad(uint8_t i);
-      uint8_t sendData_async(char buf[], uint8_t data_len);
+      /*uint8_t sendData_async(char buf[], uint8_t data_len);
       uint8_t recvData_async(char buf[], uint8_t data_len);
       void send_async(uint8_t v);
       uint8_t recv_async(void);
       void send_bit_async(uint8_t v);
-      uint8_t recv_bit_async(void);
+      uint8_t recv_bit_async(void);*/
 
       #if E2B_ASYNC_CUSTOM_FUNC
         void attachUserCommand(uint8_t num, void (*)(void));
