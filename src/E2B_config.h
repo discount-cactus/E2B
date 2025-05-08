@@ -10,7 +10,7 @@
 
 // you can exclude asynchronous E2B receiving by defining this to 0
 #ifndef E2B_ASYNC_CUSTOM_FUNC
-#define E2B_ASYNC_CUSTOM_FUNC 0
+#define E2B_ASYNC_CUSTOM_FUNC 1
 #endif
 
 // you can exclude E2B search by defining this to 0
