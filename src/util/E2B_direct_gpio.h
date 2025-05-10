@@ -124,13 +124,13 @@
 #define IO_REG_MASK_ATTR
 #define IO_REG_ASM
 
-/*#define DIRECT_READ(base, pin)        digitalRead(pin)
+#define DIRECT_READ(base, pin)        digitalRead(pin)
 #define DIRECT_WRITE_LOW(base, pin)   digitalWrite(pin, LOW)
 #define DIRECT_WRITE_HIGH(base, pin)  digitalWrite(pin, HIGH)
 #define DIRECT_MODE_INPUT(base, pin)  pinMode(pin, INPUT)
-#define DIRECT_MODE_OUTPUT(base, pin) pinMode(pin, OUTPUT)*/
+#define DIRECT_MODE_OUTPUT(base, pin) pinMode(pin, OUTPUT)
 
-static inline __attribute__((always_inline))
+/*static inline __attribute__((always_inline))
 IO_REG_TYPE directRead(IO_REG_TYPE pin){
 #if CONFIG_IDF_TARGET_ESP32C3
     return (GPIO.in.val >> pin) & 0x1;
@@ -221,9 +221,9 @@ void directModeOutput(IO_REG_TYPE pin){
 #define DIRECT_WRITE_LOW(base, pin)     directWriteLow(pin)
 #define DIRECT_WRITE_HIGH(base, pin)    directWriteHigh(pin)
 #define DIRECT_MODE_INPUT(base, pin)    directModeInput(pin)
-#define DIRECT_MODE_OUTPUT(base, pin)   directModeOutput(pin)
+#define DIRECT_MODE_OUTPUT(base, pin)   directModeOutput(pin)*/
 
-//#if !defined(E2B_ASYNC_RECV)
+#if !defined(E2B_ASYNC_RECV)
 // https://github.com/PaulStoffregen/E2B/pull/47
 // https://github.com/stickbreaker/E2B/commit/6eb7fc1c11a15b6ac8c60e5671cf36eb6829f82c
 #ifdef  interrupts
@@ -235,7 +235,7 @@ void directModeOutput(IO_REG_TYPE pin){
 #define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
 #define interrupts() portEXIT_CRITICAL(&mux);}
 //#warning "ESP32 E2B testing"
-//#endif
+#endif
 
 #elif defined(ARDUINO_ARCH_SAMD)
 #define PIN_TO_BASEREG(pin)            portModeRegister(digitalPinToPort(pin))
