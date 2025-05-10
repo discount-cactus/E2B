@@ -1,15 +1,9 @@
 #ifndef E2B_h
 #define E2B_h
 
-//#include <inttypes.h>     //Added 7-30-24. Placed under OneWireSlave_h in OneWireSlave.h so may need this
-
 #ifdef __cplusplus
 
 #include <stdint.h>
-
-#if defined(__AVR__)        //May not need this??????
-#include <util/crc16.h>
-#endif
 
 #if ARDUINO >= 100
 #include <Arduino.h>       // for delayMicroseconds, digitalPinToBitMask, etc
@@ -94,7 +88,6 @@ class E2B{
     void setSecureFlag(uint8_t level, uint8_t key = 0);
     bool getSecureFlag();
     void generateROM(unsigned char *newAddr);
-    bool waitToTransmit(void);
     uint8_t reset(void);
     void select(const uint8_t rom[8]);
     void skip(void);

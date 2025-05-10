@@ -142,32 +142,6 @@ void E2B::generateROM(unsigned char *newAddr){
   for (int i=1; i < 8; i++) newAddr[i] = random(256);
 }
 
-//Waits for devices to stop talking to transmit data. Primarily used for buses with multiple master devices
-bool E2B::waitToTransmit(void){
-	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
-	uint8_t trueCount = 0;
-	uint8_t loopCount = 0;						//Uses this as a limit so data is discarded if it has to wait too long to send
-	while((trueCount != 3) && (loopCount < 30)){
-		if(!DIRECT_READ(reg, mask)){
-			trueCount = 0;
-		}else{
-			trueCount++;
-		}
-		loopCount++;
-		delayMicroseconds(100);
-	}
-	if(loopCount >= 30){				//Returns FALSE if devices were talking for a long time. Set to greater than OR equal to to be a catch-all
-		return 0;
-	}else{											//Returns TRUE if trueCount equals 3 before the loop timeout
-		if((loopCount < 30) && (trueCount == 3)){
-			return 1;
-		}else{
-			return 0;
-		}
-	}
-}
-
 // Perform the E2B reset function.  We will wait up to 250uS for the bus to come high, if it doesn't then it is
 // broken or shorted and we return a 0. Returns 1 if a device asserted a presence pulse, 0 otherwise.
 uint8_t CRIT_TIMING E2B::reset(void){
@@ -676,7 +650,7 @@ void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
 bool E2B::waitForRequest(bool ignore_errors){
   errnum = E2B_NO_ERROR;
 
-  for (;;){
+  while(1){
     //delayMicroseconds(40);
     //Once reset is done, it waits another 30 micros
     //Master wait is 65, so we have 35 more to send our presence now that reset is done
@@ -732,7 +706,7 @@ bool E2B::recvAndProcessCmd(){
 	char addr[8];
   uint16_t raw = 0;
 
-  for (;;){
+  while(1){
     uint8_t cmd = recv_async();
     //Serial.print("cmd: "); Serial.println(cmd,HEX);
 
@@ -1050,7 +1024,7 @@ uint8_t E2B::recv_async(){
 }
 
 //Asynchronously sends a bit of data
-void E2B::send_bit_async(uint8_t v){
+void CRIT_TIMING E2B::send_bit_async(uint8_t v){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 
@@ -1081,7 +1055,7 @@ void E2B::send_bit_async(uint8_t v){
 }
 
 //Asynchronously reads a bit of data
-uint8_t E2B::recv_bit_async(void){
+uint8_t CRIT_TIMING E2B::recv_bit_async(void){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 
