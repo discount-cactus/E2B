@@ -66,6 +66,9 @@ int pinScan(int pin){
        case FAMILYCODE_TRANSCEIVER:
         Serial.print("\t\tTRANSCEIVER");
         break;
+      case 0x09:
+        Serial.print("\t\tDS2502");
+        break;
       case 0x10:
         Serial.print("\t\tDS18S20");  // or old DS1820
         break;
@@ -77,6 +80,9 @@ int pinScan(int pin){
         break;
       case 0x22:
         Serial.print("\t\tDS1822");
+        break;
+      case 0x23:
+        Serial.print("\t\tDS24B33");
         break;
       case 0x27:
         Serial.print("\t\tDS2417");
