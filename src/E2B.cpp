@@ -71,9 +71,9 @@ sample code bearing this copyright.
 #include "E2B.h"
 #include "util/E2B_direct_gpio.h"
 
-#  define CRIT_TIMING
+#define CRIT_TIMING
 
-#ifdef ARDUINO_ARCH_ESP32
+/*#ifdef ARDUINO_ARCH_ESP32
 #if !defined(E2B_ASYNC_RECV)
 // due to the dual core esp32, a critical section works better than disabling interrupts
 #  define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
@@ -83,7 +83,19 @@ sample code bearing this copyright.
 #else
 #  define CRIT_TIMING
 #endif
+#endif*/
+#ifdef ARDUINO_ARCH_ESP32
+#  if defined(E2B_ASYNC_RECV)
+     static portMUX_TYPE e2bMux = portMUX_INITIALIZER_UNLOCKED;
+#    define noInterrupts() portENTER_CRITICAL(&e2bMux)
+#    define interrupts()   portEXIT_CRITICAL(&e2bMux)
+#  else
+#    define noInterrupts() noInterrupts()
+#    define interrupts()   interrupts()
+#  endif
+#  define CRIT_TIMING IRAM_ATTR
 #endif
+
 
 //Initializes the E2B port
 void E2B::begin(uint8_t pin){

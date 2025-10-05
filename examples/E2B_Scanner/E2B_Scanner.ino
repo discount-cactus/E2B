@@ -84,6 +84,9 @@ int pinScan(int pin){
       case 0x23:
         Serial.print("\t\tDS24B33");
         break;
+      case 0x26:
+        Serial.print("\t\tMAX17320");
+        break;
       case 0x27:
         Serial.print("\t\tDS2417");
         break;
