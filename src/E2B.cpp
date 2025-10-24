@@ -71,37 +71,18 @@ sample code bearing this copyright.
 #include "E2B.h"
 #include "util/E2B_direct_gpio.h"
 
-#define CRIT_TIMING
-
-/*#ifdef ARDUINO_ARCH_ESP32
-#if !defined(E2B_ASYNC_RECV)
-// due to the dual core esp32, a critical section works better than disabling interrupts
-#  define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
-#  define interrupts() portEXIT_CRITICAL(&mux);}
-// for info on this, search "IRAM_ATTR" at https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/general-notes.html
-#  define CRIT_TIMING IRAM_ATTR
-#else
-#  define CRIT_TIMING
-#endif
-#endif*/
 #ifdef ARDUINO_ARCH_ESP32
-#  if defined(E2B_ASYNC_RECV)
-     static portMUX_TYPE e2bMux = portMUX_INITIALIZER_UNLOCKED;
-#    define noInterrupts() portENTER_CRITICAL(&e2bMux)
-#    define interrupts()   portEXIT_CRITICAL(&e2bMux)
-#  else
-#    define noInterrupts() noInterrupts()
-#    define interrupts()   interrupts()
-#  endif
-#  define CRIT_TIMING IRAM_ATTR
+#define CRIT_TIMING IRAM_ATTR
+#else
+#define CRIT_TIMING
 #endif
-
 
 //Initializes the E2B port
 void E2B::begin(uint8_t pin){
 	pinMode(pin, INPUT);
 	bitmask = PIN_TO_BITMASK(pin);
 	baseReg = PIN_TO_BASEREG(pin);
+	_pin = pin;
 
   busType = BUS;
   secureFlag = 0;
@@ -725,6 +706,9 @@ bool E2B::recvAndProcessCmd(){
   while(1){
     uint8_t cmd = recv_async();
     //Serial.print("cmd: "); Serial.println(cmd,HEX);
+		#if defined(ARDUINO_ARCH_ESP32)
+			delayMicroseconds(30);
+		#endif
 
     if (secureFlag == 1){       	//If a secure device
       if (isLocked){
@@ -873,7 +857,7 @@ bool E2B::searchROM(){
 }
 
 //Waits for a reset pulse
-bool E2B::waitReset(uint16_t timeout_ms){
+bool CRIT_TIMING E2B::waitReset(uint16_t timeout_ms){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 
@@ -930,7 +914,7 @@ bool E2B::waitReset(uint16_t timeout_ms){
 }
 
 //Waits for the precense pulse
-bool E2B::presence(uint8_t delta){
+bool CRIT_TIMING E2B::presence(uint8_t delta){
   IO_REG_TYPE mask = bitmask;
 	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
 
@@ -1036,6 +1020,7 @@ uint8_t E2B::recv_async(){
   for (uint8_t bitmask = 0x01; bitmask && (errnum == E2B_NO_ERROR); bitmask <<= 1)
 		if (recv_bit_async())
       r |= bitmask;
+	DIRECT_MODE_INPUT(baseReg, bitmask);
   return r;
 }
 
@@ -1078,6 +1063,7 @@ uint8_t CRIT_TIMING E2B::recv_bit_async(void){
   noInterrupts();
   DIRECT_MODE_INPUT(reg, mask);
   uint8_t wt = waitTimeSlotRead();
+  //Serial.print("wt: "); Serial.println(wt);
   if (wt != 1){					//1 is nominal
     if (wt == 10){
       errnum = E2B_READ_TIMESLOT_TIMEOUT_LOW;
@@ -1088,27 +1074,32 @@ uint8_t CRIT_TIMING E2B::recv_bit_async(void){
     return 0;
   }
 
-	#if ARDUINO_ARCH_ESP32                           //Special procedure for ESP32 devices
-		#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(20)
-  	/*#if !F_CPU
-		#define TIMESLOT_WAIT_RETRY_COUNT (20*(F_CPU / 1000000L))
-		#endif*/
-		uint16_t retries = TIMESLOT_WAIT_RETRY_COUNT; 											 //TIMESLOT_WAIT_RETRY_COUNT;
-		while ((!DIRECT_READ(reg, mask)) && (--retries == 0))
-			;
-		interrupts();
-		return (retries > 0);
-  #else                                             //Standard procedure for all other microcontrollers
-		delayMicroseconds(30);    											//TODO Consider reading earlier: delayMicroseconds(15);
-		uint8_t r = DIRECT_READ(reg, mask);
-		interrupts();
+	#if defined(ARDUINO_ARCH_ESP32)
+	  const uint32_t maxCycles = (F_CPU / 1000000) * 50;		//timeout window, initially 3us
+	  uint32_t start = esp_cpu_get_cycle_count();
+	  while (!((GPIO.in >> _pin) & 0x1)) {
+	    if ((esp_cpu_get_cycle_count() - start) > maxCycles) {
+	      interrupts();
+	      return 0; // timeout, line stayed low
+	    }
+	  }
+
+	  interrupts();
+	  return 1;
+	#else
+	  delayMicroseconds(30);
+	  uint8_t r = DIRECT_READ(reg, mask);
+	  interrupts();
 	  return r;
 	#endif
+	//DIRECT_MODE_INPUT(baseReg, bitmask);
 }
 
 //Waits for a low to high transition followed by a high to low within the time-out
-uint8_t E2B::waitTimeSlot(){
-  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+uint8_t CRIT_TIMING E2B::waitTimeSlot(){
+  //#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(20)
+
 	/*#if !F_CPU
 	#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L))
 	#endif*/
@@ -1136,8 +1127,10 @@ uint8_t E2B::waitTimeSlot(){
 }
 
 //Variant of waitTimeSlot used for reading
-uint8_t E2B::waitTimeSlotRead(){
-  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+uint8_t CRIT_TIMING E2B::waitTimeSlotRead(){
+  //#define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(120) / 10L
+  #define TIMESLOT_WAIT_RETRY_COUNT microsecondsToClockCycles(20)
+
 	/*#if !F_CPU
 	#define TIMESLOT_WAIT_RETRY_COUNT (120*(F_CPU / 1000000L))
 	#endif*/

@@ -55,6 +55,7 @@ class E2B{
   private:
     IO_REG_TYPE bitmask;
     volatile IO_REG_TYPE *baseReg;
+    uint8_t _pin;
 
     unsigned char ROM_NO[8];
     uint8_t LastDiscrepancy;

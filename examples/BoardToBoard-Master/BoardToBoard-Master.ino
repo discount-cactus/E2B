@@ -51,7 +51,7 @@ void loop(){
   e2b.reset();
   e2b.select(addr);
   //e2b.unlock(KEY);        // uncomment when addressing secured devices
-  e2b.write(0x44,1);        // start conversion, with parasite power on at the end*/
+  e2b.write(0x44,1);        // start conversion, with parasite power on at the end/
   
   delay(1000);
   
