@@ -1072,12 +1072,21 @@ uint8_t CRIT_TIMING E2B::recv_bit_async(void){
 	  const uint32_t maxCycles = (F_CPU / 1000000) * 30;		//timeout window, initially 3us
 	  uint32_t start = esp_cpu_get_cycle_count();
 
-		while (!((GPIO.in >> _pin) & 0x1)) {
-	    if ((esp_cpu_get_cycle_count() - start) > maxCycles) {
-	      interrupts();
-	      return 0; // timeout, line stayed low
-	    }
-	  }
+		if (_pin < 32){
+			while (!((GPIO.in >> _pin) & 0x1)) {
+		    if ((esp_cpu_get_cycle_count() - start) > maxCycles) {
+		      interrupts();
+		      return 0; // timeout, line stayed low
+		    }
+		  }
+		}else{
+			while (!((GPIO.in1.val >> (_pin - 32)) & 0x1)) {
+		    if ((esp_cpu_get_cycle_count() - start) > maxCycles) {
+		      interrupts();
+		      return 0; // timeout, line stayed low
+		    }
+		  }
+		}
 
 	  interrupts();
 		DIRECT_MODE_INPUT(baseReg, bitmask);
