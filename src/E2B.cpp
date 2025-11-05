@@ -743,7 +743,7 @@ bool E2B::recvAndProcessCmd(){
         recvData_async(addr,8);
         if (errnum != E2B_NO_ERROR)
           return false;
-        for (int i=0; i<8; i++)
+        for (uint8_t i=0; i<8; i++)
           if (rom[i] != addr[i])
             return false;
         duty();
@@ -837,7 +837,7 @@ uint8_t E2B::getScratchpad(uint8_t i){
   return scratchpad[i];
 }
 
-bool E2B::searchROM(){
+bool CRIT_TIMING E2B::searchROM(){
   uint8_t bitmask;
   uint8_t bit_send, bit_recv;
 
@@ -1001,7 +1001,9 @@ uint8_t E2B::recvData_async(char buf[], uint8_t len){
     if (errnum != E2B_NO_ERROR)
       break;
     bytes_received++;
+		//delayMicroseconds(3);
   }
+	//DIRECT_MODE_INPUT(baseReg, bitmask);
   return bytes_received;
 }
 
@@ -1017,10 +1019,10 @@ uint8_t E2B::recv_async(){
   uint8_t r = 0;
 
   errnum = E2B_NO_ERROR;
-  for (uint8_t bitmask = 0x01; bitmask && (errnum == E2B_NO_ERROR); bitmask <<= 1)
+  DIRECT_MODE_INPUT(baseReg, bitmask);
+	for (uint8_t bitmask = 0x01; bitmask && (errnum == E2B_NO_ERROR); bitmask <<= 1)
 		if (recv_bit_async())
       r |= bitmask;
-	DIRECT_MODE_INPUT(baseReg, bitmask);
   return r;
 }
 
@@ -1033,11 +1035,7 @@ void CRIT_TIMING E2B::send_bit_async(uint8_t v){
   DIRECT_MODE_INPUT(reg, mask);
   uint8_t wt = waitTimeSlot();
   if (wt != 1){					//1 is nominal
-    if (wt == 10){
-      errnum = E2B_READ_TIMESLOT_TIMEOUT_LOW;
-    } else {
-      errnum = E2B_READ_TIMESLOT_TIMEOUT_HIGH;
-    }
+    errnum = (wt == 10) ? E2B_READ_TIMESLOT_TIMEOUT_LOW : E2B_READ_TIMESLOT_TIMEOUT_HIGH;
     interrupts();
     return;
   }
@@ -1065,19 +1063,16 @@ uint8_t CRIT_TIMING E2B::recv_bit_async(void){
   uint8_t wt = waitTimeSlotRead();
   //Serial.print("wt: "); Serial.println(wt);
   if (wt != 1){					//1 is nominal
-    if (wt == 10){
-      errnum = E2B_READ_TIMESLOT_TIMEOUT_LOW;
-    } else {
-      errnum = E2B_READ_TIMESLOT_TIMEOUT_HIGH;
-    }
+    errnum = (wt == 10) ? E2B_READ_TIMESLOT_TIMEOUT_LOW : E2B_READ_TIMESLOT_TIMEOUT_HIGH;
     interrupts();
     return 0;
   }
 
 	#if defined(ARDUINO_ARCH_ESP32)
-	  const uint32_t maxCycles = (F_CPU / 1000000) * 50;		//timeout window, initially 3us
+	  const uint32_t maxCycles = (F_CPU / 1000000) * 30;		//timeout window, initially 3us
 	  uint32_t start = esp_cpu_get_cycle_count();
-	  while (!((GPIO.in >> _pin) & 0x1)) {
+
+		while (!((GPIO.in >> _pin) & 0x1)) {
 	    if ((esp_cpu_get_cycle_count() - start) > maxCycles) {
 	      interrupts();
 	      return 0; // timeout, line stayed low
@@ -1085,14 +1080,15 @@ uint8_t CRIT_TIMING E2B::recv_bit_async(void){
 	  }
 
 	  interrupts();
+		DIRECT_MODE_INPUT(baseReg, bitmask);
 	  return 1;
 	#else
 	  delayMicroseconds(30);
 	  uint8_t r = DIRECT_READ(reg, mask);
 	  interrupts();
+		DIRECT_MODE_INPUT(baseReg, bitmask);
 	  return r;
 	#endif
-	//DIRECT_MODE_INPUT(baseReg, bitmask);
 }
 
 //Waits for a low to high transition followed by a high to low within the time-out
@@ -1119,7 +1115,7 @@ uint8_t CRIT_TIMING E2B::waitTimeSlot(){
 
   //Wait for a fall form 1 to 0 on the line for timeout duration
   retries = TIMESLOT_WAIT_RETRY_COUNT;
-  while (DIRECT_READ(reg, mask));
+  while (DIRECT_READ(reg, mask))
     if (--retries == 0)
       return 20;
 
@@ -1163,7 +1159,7 @@ uint8_t CRIT_TIMING E2B::waitTimeSlotRead(){
 
   //Wait for a fall form 1 to 0 on the line for timeout duration
   retries = TIMESLOT_WAIT_READ_RETRY_COUNT;
-  while (DIRECT_READ(reg, mask));
+  while (DIRECT_READ(reg, mask))
 		if (--retries == 0)
 			return 20;
 
