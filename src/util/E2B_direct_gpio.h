@@ -124,12 +124,6 @@
 #define IO_REG_MASK_ATTR
 #define IO_REG_ASM
 
-/*#define DIRECT_READ(base, pin)        digitalRead(pin)
-#define DIRECT_WRITE_LOW(base, pin)   digitalWrite(pin, LOW)
-#define DIRECT_WRITE_HIGH(base, pin)  digitalWrite(pin, HIGH)
-#define DIRECT_MODE_INPUT(base, pin)  pinMode(pin, INPUT)
-#define DIRECT_MODE_OUTPUT(base, pin) pinMode(pin, OUTPUT)*/
-
 static inline __attribute__((always_inline))
 IO_REG_TYPE directRead(IO_REG_TYPE pin) {
 #if CONFIG_IDF_TARGET_ESP32C3

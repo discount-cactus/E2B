@@ -145,8 +145,7 @@ uint8_t CRIT_TIMING E2B::reset(void){
 	noInterrupts();
 	DIRECT_MODE_INPUT(reg, mask);
 	interrupts();
-	// wait until the wire is high... just in case
-	do {
+	do {				//waits until the wire is high just in case
 		if (--retries == 0) return 0;
 		delayMicroseconds(2);
 	} while ( !DIRECT_READ(reg, mask));
@@ -257,7 +256,7 @@ void E2B::read_bytes(uint8_t *buf, uint16_t count){
 void E2B::select(const uint8_t rom[8]){
     write(0x55);
 
-    for (uint8_t i = 0; i < 8; i++) write(rom[i]);
+    for (uint8_t i=0; i < 8; i++) write(rom[i]);
 }
 
 //Performs a SKIP ROM command
@@ -553,7 +552,7 @@ bool E2B::search_and_log(uint8_t *newAddr, uint8_t *searchLog, bool search_mode)
       LastFamilyDiscrepancy = 0;
       search_result = false;
    }else{
-      for(int i=0; i < 8; i++){
+      for(uint8_t i=0; i < 8; i++){
 				newAddr[i] = ROM_NO[i];
 				//searchLog[i] = newAddr[i];		//Adds the new address to the searchLog database
 				searchLog[i] = ROM_NO[i];
@@ -581,7 +580,7 @@ void E2B::MasterResetPulseDetection(){
 
 //Initializes the E2B port for asynchronous receiving of data
 void E2B::init(unsigned char rom[8]){
-	for (int i=0; i<7; i++)
+	for(uint8_t i=0; i<7; i++)
     this->rom[i] = rom[i];
 
 		/*previous = 0;
@@ -590,14 +589,14 @@ void E2B::init(unsigned char rom[8]){
 
 	// Initializes all function pointers to NULL for user-defined functions
 	#if E2B_ASYNC_CUSTOM_FUNC
-		for(int i=0; i < 256; i++){
+		for(uint8_t i=0; i < 256; i++){
 		    userFunc[i] = NULL;
 		}
 	#endif
 
 	#if E2B_CRC
 		uint8_t romUINT[7];
-		for (int i=0; i<7; i++)
+		for(uint8_t i=0; i<7; i++)
 			romUINT[i] = rom[i];
 		this->rom[7] = crc8(romUINT,7);
 		//this->rom[7] = crc8(this->rom,7);
@@ -606,11 +605,11 @@ void E2B::init(unsigned char rom[8]){
 
 //Writes the input data to the scratchpad
 void E2B::setScratchpad(unsigned char scratchpad[9]){
-  for (int i=0; i<8; i++)
+  for(uint8_t i=0; i<8; i++)
     this->scratchpad[i] = scratchpad[i];
 	#if E2B_CRC
 		uint8_t scratchpadUINT[8];
-		for (int i=0; i<8; i++)
+		for(uint8_t i=0; i<8; i++)
 	    scratchpadUINT[i] = scratchpad[i];
   	this->scratchpad[8] = crc8(scratchpadUINT,8);
 		//this->scratchpad[8] = crc8(this->scratchpad,8);
@@ -628,7 +627,7 @@ void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
 	userFunc[num] = userFunction;
 	#if E2B_CRC
 		uint8_t scratchpadUINT[8];
-		for (int i=0; i<8; i++)
+		for(uint8_t i=0; i<8; i++)
 			scratchpadUINT[i] = scratchpad[i];
 		this->scratchpad[8] = crc8(scratchpadUINT,8);
 		//this->scratchpad[8] = crc8(this->scratchpad,8);
@@ -736,7 +735,7 @@ bool E2B::recvAndProcessCmd(){
         recvData_async(addr,8);
         if (errnum != E2B_NO_ERROR)
           return false;
-        for (uint8_t i=0; i<8; i++)
+        for(uint8_t i=0; i<8; i++)
           if (rom[i] != addr[i])
             return false;
         duty();
@@ -835,8 +834,8 @@ bool CRIT_TIMING E2B::searchROM(){
   uint8_t bitmask;
   uint8_t bit_send, bit_recv;
 
-  for (int i=0; i<8; i++){
-    for (bitmask = 0x01; bitmask; bitmask <<= 1){
+  for(uint8_t i=0; i<8; i++){
+    for(bitmask = 0x01; bitmask; bitmask <<= 1){
       bit_send = (bitmask & rom[i])?1:0;
       send_bit_async(bit_send);
       send_bit_async(!bit_send);
@@ -976,7 +975,7 @@ bool E2B::presence(){
 uint8_t E2B::sendData_async(char buf[], uint8_t len){
   uint8_t bytes_sent = 0;
 
-  for (int i=0; i<len; i++){
+  for(int i=0; i<len; i++){
     send_async(buf[i]);
     if (errnum != E2B_NO_ERROR)
       break;
@@ -989,7 +988,7 @@ uint8_t E2B::sendData_async(char buf[], uint8_t len){
 uint8_t E2B::recvData_async(char buf[], uint8_t len){
   uint8_t bytes_received = 0;
 
-  for (int i=0; i<len; i++){
+  for(int i=0; i<len; i++){
     buf[i] = recv_async();
     if (errnum != E2B_NO_ERROR)
       break;
@@ -1232,7 +1231,7 @@ uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
     static const uint8_t oddparity[16] =
         { 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0 };
 
-    for (uint16_t i = 0 ; i < len ; i++){
+    for(uint16_t i=0 ; i < len ; i++){
       // Even though we're just copying a byte from the input,
       // we'll be doing 16-bit computation with it.
       uint16_t cdata = input[i];
@@ -1259,7 +1258,7 @@ uint16_t E2B::crc16(const uint8_t* input, uint16_t len, uint16_t crc){
 //Computes a standard XOR checksum
 uint8_t E2B::checksum(const uint8_t *addr, uint8_t len){
   uint8_t checksum = 0;
-  for (int i=0; i < len; i++) checksum ^= addr[i];
+  for(int i=0; i < len; i++) checksum ^= addr[i];
 	return checksum;
 }
 
