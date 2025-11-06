@@ -145,8 +145,7 @@ uint8_t CRIT_TIMING E2B::reset(void){
 	noInterrupts();
 	DIRECT_MODE_INPUT(reg, mask);
 	interrupts();
-	// wait until the wire is high... just in case
-	do {
+	do {				//waits until the wire is high just in case
 		if (--retries == 0) return 0;
 		delayMicroseconds(2);
 	} while ( !DIRECT_READ(reg, mask));
