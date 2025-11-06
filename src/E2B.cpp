@@ -90,11 +90,6 @@ void E2B::begin(uint8_t pin){
   unlockedState = 0;
   secureKey = 0x00;
 
-	// you manually define the CPU frequency here for boards that do not automatically define F_CPU
-	/*#if !F_CPU
-	#define F_CPU 480000000
-	#endif*/
-
   #if E2B_SEARCH
 	 reset_search();
   #endif
@@ -241,7 +236,7 @@ void E2B::write_bytes(const uint8_t *buf, uint16_t count, bool power){
   }
 }
 
-// Reads a byte of data
+//Reads a byte of data
 uint8_t E2B::read(){
     uint8_t bitMask;
     uint8_t r = 0;
@@ -629,8 +624,6 @@ void E2B::setPower(uint8_t power){
 
 #if E2B_ASYNC_CUSTOM_FUNC
 //Enables users to define their own functions for the device to automatically respond with
-//typedef void (*FuncPointerArray)(void);
-//FuncPointerArray userFunc[256];
 void E2B::attachUserCommand(uint8_t num, void (*userFunction)(void)){
 	userFunc[num] = userFunction;
 	#if E2B_CRC
@@ -837,6 +830,7 @@ uint8_t E2B::getScratchpad(uint8_t i){
   return scratchpad[i];
 }
 
+//Responds to a search ROM (0xF0) command
 bool CRIT_TIMING E2B::searchROM(){
   uint8_t bitmask;
   uint8_t bit_send, bit_recv;
@@ -947,7 +941,7 @@ bool CRIT_TIMING E2B::presence(uint8_t delta){
   #if ARDUINO_ARCH_ESP32                           //Special procedure for ESP32 devices
     while (!DIRECT_READ(reg, mask));
     do {
-    	if (retries-- == 0)// return 0;
+    	if (retries-- == 0)
       	delayMicroseconds(2);
     } while(!DIRECT_READ(reg, mask));
 
@@ -961,8 +955,7 @@ bool CRIT_TIMING E2B::presence(uint8_t delta){
     while (!DIRECT_READ(reg, mask));
     do {
     if (retries-- == 0)
-      //return false;
-    delayMicroseconds(2);
+      delayMicroseconds(2);
     } while(!DIRECT_READ(reg, mask));
     /*
     if ( !DIRECT_READ(reg, mask)){
@@ -1001,9 +994,7 @@ uint8_t E2B::recvData_async(char buf[], uint8_t len){
     if (errnum != E2B_NO_ERROR)
       break;
     bytes_received++;
-		//delayMicroseconds(3);
   }
-	//DIRECT_MODE_INPUT(baseReg, bitmask);
   return bytes_received;
 }
 
@@ -1069,7 +1060,7 @@ uint8_t CRIT_TIMING E2B::recv_bit_async(void){
   }
 
 	#if defined(ARDUINO_ARCH_ESP32)
-	  const uint32_t maxCycles = (F_CPU / 1000000) * 30;		//timeout window, initially 3us
+	  const uint32_t maxCycles = (F_CPU / 1000000) * 30;		//30us timeout window, initially 3us
 	  uint32_t start = esp_cpu_get_cycle_count();
 
 		if (_pin < 32){

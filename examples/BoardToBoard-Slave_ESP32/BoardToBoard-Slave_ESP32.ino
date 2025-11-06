@@ -24,7 +24,7 @@ void IRAM_ATTR respond() {
 void setup() {
   Serial.begin(9600);
   while(!Serial){}
-  Serial.println("E2B Slave Node Test.");
+  Serial.println("E2B ESP32 Slave Node Test.");
   //randomSeed(analogRead(0));          //Uncomment when generating new rom address
   //e2b.generateROM(rom);               //Uncomment when generating new rom address
   attachInterrupt(E2B_pin,respond,CHANGE);
@@ -38,14 +38,8 @@ void loop(void) {
   if (edge_flag) {
     edge_flag = false;
     unsigned long diff = last_edge - old_edge;
-    if (diff >= lowmark && diff <= highmark) {
+    if (diff >= lowmark && diff <= highmark)
       e2b.waitForRequestInterrupt(false);
-      /*unsigned long start = micros();
-      while (!e2b.waitForRequestInterrupt(false)) {
-        if (micros() - start > 10000) break; // 10 ms timeout
-      }*/
-    }
   }
-  //e2b.waitForRequest(false);
   //Serial.println(e2b.getScratchpad(4),HEX);
 }
