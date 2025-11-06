@@ -11,7 +11,7 @@
 #define FAMILYCODE 0xA0
 #elif defined(__LGT8F__)      //Defined here because LGT328 boards are of AVR architectures (since they're a drop-in replacement to the nanov3.0)
 #define IO_REG_TYPE uint8_t
-#define FAMILYCODE 0xB1
+#define FAMILYCODE 0xB2
 #else
 #define FAMILYCODE 0xA1
 #endif
@@ -41,27 +41,30 @@
 #elif defined(ARDUINO_ARCH_STM32)
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xA9
-#elif defined(__SAMD21G18A__)
+#elif defined(ARDUINO_GIGA) || defined(ARDUINO_GIGA_R1)
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAA
-#elif defined(__ASR6501__)
+#elif defined(__SAMD21G18A__)
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAB
-#elif defined(RBL_NRF51822)
+#elif defined(__ASR6501__)
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAC
-#elif defined(__arc__) /* Arduino101/Genuino101 specifics */
+#elif defined(RBL_NRF51822)
 #define IO_REG_TYPE uint32_t
 #define FAMILYCODE 0xAD
+#elif defined(__arc__) /* Arduino101/Genuino101 specifics */
+#define IO_REG_TYPE uint32_t
+#define FAMILYCODE 0xAE
 #elif defined(CH32V20x) || defined(CH32V203xB) || defined(CH32V208) || defined(CH32V30x) || defined(CH32V30x_C) || defined(CH32V10x) || defined(CH32V00x) || defined(CH32X035)
 //#error "CH32 support does not exist (yet)"
 #define IO_REG_TYPE uint32_t
-#define FAMILYCODE 0xAE
+#define FAMILYCODE 0xAF
 #elif defined(__riscv)
 #define IO_REG_TYPE uint32_t
-#define FAMILYCODE 0xAF
+#define FAMILYCODE 0xB0
 #else
 #define IO_REG_TYPE unsigned int
-#define FAMILYCODE 0xB0
+#define FAMILYCODE 0xB1
 #endif
 #endif

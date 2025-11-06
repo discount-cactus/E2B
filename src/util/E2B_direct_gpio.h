@@ -124,6 +124,12 @@
 #define IO_REG_MASK_ATTR
 #define IO_REG_ASM
 
+/*#define DIRECT_READ(base, pin)        digitalRead(pin)
+#define DIRECT_WRITE_LOW(base, pin)   digitalWrite(pin, LOW)
+#define DIRECT_WRITE_HIGH(base, pin)  digitalWrite(pin, HIGH)
+#define DIRECT_MODE_INPUT(base, pin)  pinMode(pin, INPUT)
+#define DIRECT_MODE_OUTPUT(base, pin) pinMode(pin, OUTPUT)*/
+
 static inline __attribute__((always_inline))
 IO_REG_TYPE directRead(IO_REG_TYPE pin) {
 #if CONFIG_IDF_TARGET_ESP32C3
@@ -253,6 +259,27 @@ static portMUX_TYPE e2bMux = portMUX_INITIALIZER_UNLOCKED;
 #define DIRECT_WRITE_HIGH(base, pin)    digitalWriteFast((PinName)pin, HIGH)
 #define DIRECT_MODE_INPUT(base, pin)    pin_function((PinName)pin, STM_PIN_DATA(STM_MODE_INPUT, GPIO_NOPULL, 0))
 #define DIRECT_MODE_OUTPUT(base, pin)   pin_function((PinName)pin, STM_PIN_DATA(STM_MODE_OUTPUT_PP, GPIO_NOPULL, 0))
+
+#elif defined(ARDUINO_GIGA) || defined(ARDUINO_GIGA_R1)
+#define PIN_TO_BASEREG(pin)             (0)
+#define PIN_TO_BITMASK(pin)             ((uint32_t)digitalPinToPinName(pin))
+#define IO_REG_TYPE uint32_t
+#define IO_REG_BASE_ATTR
+#define IO_REG_MASK_ATTR
+#define IO_REG_ASM
+#define DIRECT_READ(base, pin)          digitalRead((PinName)pin)
+#define DIRECT_WRITE_LOW(base, pin)     digitalWrite((PinName)pin, LOW)
+#define DIRECT_WRITE_HIGH(base, pin)    digitalWrite((PinName)pin, HIGH)
+#define DIRECT_MODE_INPUT(base, pin)    pin_function((PinName)pin, STM_PIN_DATA(STM_MODE_INPUT, GPIO_NOPULL, 0))
+#define DIRECT_MODE_OUTPUT(base, pin)   pin_function((PinName)pin, STM_PIN_DATA(STM_MODE_OUTPUT_PP, GPIO_NOPULL, 0))
+#ifndef F_CPU
+  #define F_CPU 480000000L   // 480 MHz for Cortex-M7 core
+#endif
+#ifndef microsecondsToClockCycles
+  #define microsecondsToClockCycles(a) ((uint32_t)((a) * (F_CPU / 1000000L)))
+#endif
+#define TIMESLOT_WAIT_RETRY_COUNT         microsecondsToClockCycles(20)
+#define TIMESLOT_WAIT_READ_RETRY_COUNT    microsecondsToClockCycles(135)
 
 #elif defined(__SAMD21G18A__)
 #define PIN_TO_BASEREG(pin)             portModeRegister(digitalPinToPort(pin))

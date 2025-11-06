@@ -111,16 +111,19 @@ int pinScan(int pin){
       case 0xA1:
         Serial.print("\t\tArduino");
         break;
-      case 0xA7:
+      case 0xA8:
         Serial.print("\t\tESP32");
         break;
-      case 0xA8:
+      case 0xA9:
         Serial.print("\t\tSTM32");
         break;
-      case 0xA9:
+      case 0xAA:
+        Serial.print("\t\tGiga");
+        break;
+      case 0xAB:
         Serial.print("\t\tSAMD21");
         break;
-      case 0xB1:
+      case 0xB2:
         Serial.print("\t\tLGT8F");
         break;
     }
