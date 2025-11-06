@@ -5,7 +5,7 @@
 
 // you can exclude asynchronous E2B receiving by defining this to 0
 #ifndef E2B_ASYNC_RECV
-#define E2B_ASYNC_RECV 1
+#define E2B_ASYNC_RECV 0
 #endif
 
 // you can exclude asynchronous E2B receiving by defining this to 0

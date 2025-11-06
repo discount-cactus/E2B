@@ -131,16 +131,15 @@
 #define DIRECT_MODE_OUTPUT(base, pin) pinMode(pin, OUTPUT)*/
 
 static inline __attribute__((always_inline))
-IO_REG_TYPE directRead(IO_REG_TYPE pin){
+IO_REG_TYPE directRead(IO_REG_TYPE pin) {
 #if CONFIG_IDF_TARGET_ESP32C3
     return (GPIO.in.val >> pin) & 0x1;
-#else // plain ESP32
-    if ( pin < 32 )
+#else
+    if (pin < 32)
         return (GPIO.in >> pin) & 0x1;
-    else if ( pin < 46 )
+    else if (pin < 46)
         return (GPIO.in1.val >> (pin - 32)) & 0x1;
 #endif
-
     return 0;
 }
 
@@ -223,19 +222,17 @@ void directModeOutput(IO_REG_TYPE pin){
 #define DIRECT_MODE_INPUT(base, pin)    directModeInput(pin)
 #define DIRECT_MODE_OUTPUT(base, pin)   directModeOutput(pin)
 
-//#if !defined(E2B_ASYNC_RECV)
-// https://github.com/PaulStoffregen/E2B/pull/47
-// https://github.com/stickbreaker/E2B/commit/6eb7fc1c11a15b6ac8c60e5671cf36eb6829f82c
 #ifdef  interrupts
 #undef  interrupts
 #endif
 #ifdef  noInterrupts
 #undef  noInterrupts
 #endif
-#define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
-#define interrupts() portEXIT_CRITICAL(&mux);}
-//#warning "ESP32 E2B testing"
-//#endif
+/*#define noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
+#define interrupts() portEXIT_CRITICAL(&mux);}*/
+static portMUX_TYPE e2bMux = portMUX_INITIALIZER_UNLOCKED;
+#define noInterrupts() portENTER_CRITICAL(&e2bMux)
+#define interrupts()   portEXIT_CRITICAL(&e2bMux)
 
 #elif defined(ARDUINO_ARCH_SAMD)
 #define PIN_TO_BASEREG(pin)            portModeRegister(digitalPinToPort(pin))
@@ -342,40 +339,44 @@ IO_REG_TYPE directRead(volatile IO_REG_TYPE *base, IO_REG_TYPE pin){
 
 static inline __attribute__((always_inline))
 void directModeInput(volatile IO_REG_TYPE *base, IO_REG_TYPE pin){
-    if (SS_GPIO == GPIO_TYPE(pin)) {
-        WRITE_ARC_REG(READ_ARC_REG((((IO_REG_TYPE)base) + DIR_OFFSET_SS)) & ~(0x01 << GPIO_ID(pin)),
-			((IO_REG_TYPE)(base) + DIR_OFFSET_SS));
-    } else {
-        MMIO_REG_VAL_FROM_BASE((IO_REG_TYPE)base, DIR_OFFSET_SOC) &= ~(0x01 << GPIO_ID(pin));
-    }
+  gpio_set_direction((gpio_num_t)pin, GPIO_MODE_INPUT);
+  /*if (SS_GPIO == GPIO_TYPE(pin)) {
+      WRITE_ARC_REG(READ_ARC_REG((((IO_REG_TYPE)base) + DIR_OFFSET_SS)) & ~(0x01 << GPIO_ID(pin)),
+		((IO_REG_TYPE)(base) + DIR_OFFSET_SS));
+  } else {
+      MMIO_REG_VAL_FROM_BASE((IO_REG_TYPE)base, DIR_OFFSET_SOC) &= ~(0x01 << GPIO_ID(pin));
+  }*/
 }
 
 static inline __attribute__((always_inline))
 void directModeOutput(volatile IO_REG_TYPE *base, IO_REG_TYPE pin){
-    if (SS_GPIO == GPIO_TYPE(pin)) {
-        WRITE_ARC_REG(READ_ARC_REG(((IO_REG_TYPE)(base) + DIR_OFFSET_SS)) | (0x01 << GPIO_ID(pin)),
-			((IO_REG_TYPE)(base) + DIR_OFFSET_SS));
-    } else {
-        MMIO_REG_VAL_FROM_BASE((IO_REG_TYPE)base, DIR_OFFSET_SOC) |= (0x01 << GPIO_ID(pin));
-    }
+  gpio_set_direction((gpio_num_t)pin, GPIO_MODE_OUTPUT);
+  /*if (SS_GPIO == GPIO_TYPE(pin)) {
+      WRITE_ARC_REG(READ_ARC_REG(((IO_REG_TYPE)(base) + DIR_OFFSET_SS)) | (0x01 << GPIO_ID(pin)),
+		((IO_REG_TYPE)(base) + DIR_OFFSET_SS));
+  } else {
+      MMIO_REG_VAL_FROM_BASE((IO_REG_TYPE)base, DIR_OFFSET_SOC) |= (0x01 << GPIO_ID(pin));
+  }*/
 }
 
 static inline __attribute__((always_inline))
 void directWriteLow(volatile IO_REG_TYPE *base, IO_REG_TYPE pin){
-    if (SS_GPIO == GPIO_TYPE(pin)) {
-        WRITE_ARC_REG(READ_ARC_REG(base) & ~(0x01 << GPIO_ID(pin)), base);
-    } else {
-        MMIO_REG_VAL(base) &= ~(0x01 << GPIO_ID(pin));
-    }
+  gpio_set_level((gpio_num_t)pin, 0);
+  /*if (SS_GPIO == GPIO_TYPE(pin)) {
+      WRITE_ARC_REG(READ_ARC_REG(base) & ~(0x01 << GPIO_ID(pin)), base);
+  } else {
+      MMIO_REG_VAL(base) &= ~(0x01 << GPIO_ID(pin));
+  }*/
 }
 
 static inline __attribute__((always_inline))
 void directWriteHigh(volatile IO_REG_TYPE *base, IO_REG_TYPE pin){
-    if (SS_GPIO == GPIO_TYPE(pin)) {
-        WRITE_ARC_REG(READ_ARC_REG(base) | (0x01 << GPIO_ID(pin)), base);
-    } else {
-        MMIO_REG_VAL(base) |= (0x01 << GPIO_ID(pin));
-    }
+  gpio_set_level((gpio_num_t)pin, 1);
+  /*if (SS_GPIO == GPIO_TYPE(pin)) {
+      WRITE_ARC_REG(READ_ARC_REG(base) | (0x01 << GPIO_ID(pin)), base);
+  } else {
+      MMIO_REG_VAL(base) |= (0x01 << GPIO_ID(pin));
+  }*/
 }
 
 #define DIRECT_READ(base, pin)		directRead(base, pin)
